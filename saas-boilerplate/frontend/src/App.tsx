@@ -6,6 +6,9 @@ import Signup from '@/pages/auth/Signup';
 import DashboardLayout from '@/layouts/DashboardLayout';
 import DashboardPage from '@/pages/DashboardPage';
 import ProfilePage from '@/pages/ProfilePage';
+import OrganizationSettingsPage from '@/pages/OrganizationSettingsPage';
+import SubscriptionPage from '@/pages/SubscriptionPage';
+import InvitationAcceptPage from '@/pages/InvitationAcceptPage';
 import { useAuthStore } from '@/stores/authStore';
 
 const queryClient = new QueryClient();
@@ -32,6 +35,7 @@ function AppRoutes() {
     <Routes>
       <Route path="/login" element={<Login />} />
       <Route path="/signup" element={<Signup />} />
+      <Route path="/invitation/:token" element={<InvitationAcceptPage />} />
 
       {/* Protected Routes */}
       <Route element={<RequireAuth />}>
@@ -39,6 +43,8 @@ function AppRoutes() {
              <Route index element={<DashboardPage />} />
              <Route path="profile" element={<ProfilePage />} />
              <Route path="settings" element={<div>Settings Placeholder</div>} />
+             <Route path="organization" element={<OrganizationSettingsPage />} />
+             <Route path="subscription" element={<SubscriptionPage />} />
         </Route>
       </Route>
 

@@ -7,7 +7,8 @@ import {
   User,
   Settings,
   LogOut,
-  Building2
+  Building2,
+  CreditCard
 } from 'lucide-react';
 import OrgSwitcher from '../components/OrgSwitcher';
 
@@ -40,6 +41,14 @@ export default function DashboardLayout() {
           <Link to="/app/profile" className="flex items-center space-x-2 p-2 rounded-md hover:bg-gray-100 text-gray-700">
             <User size={20} />
             <span>Profile</span>
+          </Link>
+          <Link to="/app/organization" className="flex items-center space-x-2 p-2 rounded-md hover:bg-gray-100 text-gray-700">
+             <Building2 size={20} />
+             <span>Organization</span>
+          </Link>
+          <Link to="/app/subscription" className="flex items-center space-x-2 p-2 rounded-md hover:bg-gray-100 text-gray-700">
+             <CreditCard size={20} />
+             <span>Subscription</span>
           </Link>
           <Link to="/app/settings" className="flex items-center space-x-2 p-2 rounded-md hover:bg-gray-100 text-gray-700">
              <Settings size={20} />

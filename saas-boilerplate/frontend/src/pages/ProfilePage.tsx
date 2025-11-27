@@ -4,6 +4,7 @@ import { useAuthStore } from '@/stores/authStore';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import TwoFASetup from '@/components/TwoFASetup';
 
 export default function ProfilePage() {
   const { user } = useAuthStore();
@@ -54,6 +55,14 @@ export default function ProfilePage() {
             </Button>
           </div>
         </form>
+      </div>
+
+      <div>
+        <h2 className="text-xl font-bold tracking-tight mb-4">Security</h2>
+        <div className="rounded-lg border bg-white p-6 shadow-sm">
+             <h3 className="text-lg font-medium mb-4">Two-Factor Authentication</h3>
+             <TwoFASetup />
+        </div>
       </div>
     </div>
   );
