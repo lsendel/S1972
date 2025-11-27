@@ -1,19 +1,19 @@
 import React from "react"
 import { useForm } from "react-hook-form"
-import { useAuth } from "@/hooks/useAuth"
+import { useAuthStore } from "@/stores/authStore"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Link, useNavigate } from "react-router-dom"
 
 export default function Signup() {
-  const { signup } = useAuth()
+  const signup = useAuthStore((state) => state.signup)
   const navigate = useNavigate()
   const { register, handleSubmit, formState: { errors, isSubmitting } } = useForm()
 
   const onSubmit = async (data: any) => {
     try {
       await signup(data)
-      navigate('/login') // Or onboarding
+      navigate('/app') // Direct to dashboard after signup
     } catch (error) {
       console.error(error)
     }
