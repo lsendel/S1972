@@ -1,18 +1,28 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate, Outlet } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import Login from '@/pages/auth/Login';
 import Signup from '@/pages/auth/Signup';
-import { useAuth } from '@/hooks/useAuth';
+import DashboardLayout from '@/layouts/DashboardLayout';
+import DashboardPage from '@/pages/DashboardPage';
+import ProfilePage from '@/pages/ProfilePage';
+import { useAuthStore } from '@/stores/authStore';
 
 const queryClient = new QueryClient();
 
-// Placeholder for protected route wrapper
+// Protected route wrapper
 function RequireAuth() {
-    const { user, isLoading } = useAuth();
+    const { isAuthenticated, isLoading, checkAuth } = useAuthStore();
 
-    if (isLoading) return <div>Loading...</div>;
-    if (!user) return <Navigate to="/login" replace />;
+    useEffect(() => {
+        checkAuth();
+    }, [checkAuth]);
+
+    if (isLoading) return <div className="flex h-screen items-center justify-center">Loading...</div>;
+
+    // We might need a better way to handle initial load vs unauthenticated
+    // For now, if not authenticated after loading, redirect.
+    if (!isAuthenticated) return <Navigate to="/login" replace />;
 
     return <Outlet />;
 }
@@ -25,8 +35,11 @@ function AppRoutes() {
 
       {/* Protected Routes */}
       <Route element={<RequireAuth />}>
-        <Route path="/app" element={<div>Dashboard Placeholder</div>} />
-        {/* Add more app routes here */}
+        <Route path="/app" element={<DashboardLayout />}>
+             <Route index element={<DashboardPage />} />
+             <Route path="profile" element={<ProfilePage />} />
+             <Route path="settings" element={<div>Settings Placeholder</div>} />
+        </Route>
       </Route>
 
       <Route path="/" element={<Navigate to="/app" />} />

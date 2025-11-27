@@ -1,12 +1,12 @@
 import React from "react"
 import { useForm } from "react-hook-form"
-import { useAuth } from "@/hooks/useAuth"
+import { useAuthStore } from "@/stores/authStore"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Link, useNavigate } from "react-router-dom"
 
 export default function Login() {
-  const { login } = useAuth()
+  const login = useAuthStore((state) => state.login)
   const navigate = useNavigate()
   const { register, handleSubmit, formState: { errors, isSubmitting } } = useForm()
 
