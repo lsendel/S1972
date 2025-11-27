@@ -1,14 +1,7 @@
 from rest_framework import serializers
-from django.contrib.auth import get_user_model, authenticate
+from django.contrib.auth import authenticate
 from django.utils.translation import gettext_lazy as _
-
-User = get_user_model()
-
-class UserSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = User
-        fields = ('id', 'email', 'full_name', 'avatar_url', 'is_staff', 'email_verified', 'totp_enabled')
-        read_only_fields = ('id', 'email_verified', 'is_staff')
+from apps.accounts.models import User
 
 class LoginSerializer(serializers.Serializer):
     email = serializers.EmailField()
@@ -32,19 +25,19 @@ class LoginSerializer(serializers.Serializer):
         return attrs
 
 class SignupSerializer(serializers.ModelSerializer):
-    password = serializers.CharField(write_only=True)
+    password = serializers.CharField(write_only=True, min_length=10)
 
     class Meta:
         model = User
-        fields = ('email', 'password', 'full_name')
+        fields = ('id', 'email', 'password', 'full_name')
 
     def create(self, validated_data):
-        user = User.objects.create_user(
-            email=validated_data['email'],
-            password=validated_data['password'],
-            full_name=validated_data.get('full_name', '')
-        )
-        return user
+        return User.objects.create_user(**validated_data)
 
 class PasswordResetSerializer(serializers.Serializer):
     email = serializers.EmailField()
+
+class PasswordResetConfirmSerializer(serializers.Serializer):
+    new_password = serializers.CharField(write_only=True, min_length=10)
+    token = serializers.CharField()
+    uid = serializers.CharField()

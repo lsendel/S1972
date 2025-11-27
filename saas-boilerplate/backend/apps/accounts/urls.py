@@ -1,5 +1,5 @@
 from django.urls import path
 
 urlpatterns = [
-    # Add organization related URLs here
+    # Add account related URLs here
 ]

@@ -2,21 +2,20 @@ export interface User {
     id: string;
     email: string;
     full_name: string;
-    avatar_url: string;
+    avatar_url?: string;
+    is_active: boolean;
     is_staff: boolean;
     email_verified: boolean;
     totp_enabled: boolean;
 }
 
-export interface AuthResponse {
-    data: User;
+export interface LoginCredentials {
+    email: string;
+    password: string;
 }
 
-export interface Organization {
-    id: string;
-    name: string;
-    slug: string;
-    logo_url: string;
-    role: 'owner' | 'admin' | 'member';
-    created_at: string;
+export interface SignupData {
+    email: string;
+    password: string;
+    full_name?: string;
 }

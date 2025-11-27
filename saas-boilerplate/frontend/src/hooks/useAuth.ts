@@ -1,47 +1,48 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { authApi } from '../api/auth';
-import { User } from '../types/auth';
+import { auth } from '../api/auth';
+import { LoginCredentials, SignupData } from '../types/auth';
 
 export function useAuth() {
     const queryClient = useQueryClient();
 
     const { data: user, isLoading, error } = useQuery({
         queryKey: ['auth', 'me'],
-        queryFn: authApi.me,
+        queryFn: () => auth.me(),
         retry: false,
         staleTime: 5 * 60 * 1000, // 5 minutes
     });
 
     const loginMutation = useMutation({
-        mutationFn: authApi.login,
-        onSuccess: (data) => {
-            queryClient.setQueryData(['auth', 'me'], data);
-        },
-    });
-
-    const signupMutation = useMutation({
-        mutationFn: authApi.signup,
-        onSuccess: (data) => {
-             // Depending on flow, might autologin or require verification
-             // For now assuming we might get user data back
-             queryClient.setQueryData(['auth', 'me'], data);
+        mutationFn: (credentials: LoginCredentials) => auth.login(credentials),
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['auth', 'me'] });
         },
     });
 
     const logoutMutation = useMutation({
-        mutationFn: authApi.logout,
+        mutationFn: () => auth.logout(),
         onSuccess: () => {
             queryClient.setQueryData(['auth', 'me'], null);
             queryClient.clear();
         },
     });
 
+    const signupMutation = useMutation({
+        mutationFn: (data: SignupData) => auth.signup(data),
+        onSuccess: () => {
+            // Depending on flow, might auto-login or require verification
+        },
+    });
+
     return {
-        user: user as User | undefined, // Cast because axios interceptor unwraps response
+        user,
         isLoading,
         error,
         login: loginMutation.mutateAsync,
-        signup: signupMutation.mutateAsync,
         logout: logoutMutation.mutateAsync,
+        signup: signupMutation.mutateAsync,
+        isLoggingIn: loginMutation.isPending,
+        isLoggingOut: logoutMutation.isPending,
+        isSigningUp: signupMutation.isPending,
     };
 }

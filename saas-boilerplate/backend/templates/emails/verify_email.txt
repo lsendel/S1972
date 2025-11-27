@@ -1,0 +1,15 @@
+Verify Your Email Address
+========================
+
+Hi{% if user.full_name %} {{ user.full_name }}{% endif %},
+
+Thank you for signing up! To complete your registration, please verify your email address by visiting the following link:
+
+{{ verification_url }}
+
+Note: This verification link will expire in 24 hours.
+
+If you didn't create an account with us, please ignore this email.
+
+Best regards,
+The SaaS Platform Team

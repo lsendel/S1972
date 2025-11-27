@@ -1,41 +1,44 @@
 from django.db import models
-from uuid import uuid4
 from django.conf import settings
 from django.utils.translation import gettext_lazy as _
+from apps.core.models import BaseModel
+import uuid
 
-class Organization(models.Model):
-    id = models.UUIDField(primary_key=True, default=uuid4, editable=False)
+class Organization(BaseModel):
+    """
+    Represents a tenant/organization.
+    """
     name = models.CharField(max_length=255)
     slug = models.SlugField(unique=True, db_index=True)
     logo_url = models.URLField(blank=True)
-
+    
     stripe_customer_id = models.CharField(max_length=255, unique=True, null=True, blank=True)
-
+    
     is_active = models.BooleanField(default=True)
-    created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
-
     settings = models.JSONField(default=dict, blank=True)
 
     def __str__(self):
         return self.name
 
-class Membership(models.Model):
+class Membership(BaseModel):
+    """
+    Links a User to an Organization with a specific Role.
+    """
+    ROLE_OWNER = 'owner'
+    ROLE_ADMIN = 'admin'
+    ROLE_MEMBER = 'member'
+    
     ROLE_CHOICES = (
-        ('owner', 'Owner'),
-        ('admin', 'Admin'),
-        ('member', 'Member'),
+        (ROLE_OWNER, _('Owner')),
+        (ROLE_ADMIN, _('Admin')),
+        (ROLE_MEMBER, _('Member')),
     )
 
-    id = models.UUIDField(primary_key=True, default=uuid4, editable=False)
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='memberships')
     organization = models.ForeignKey(Organization, on_delete=models.CASCADE, related_name='memberships')
-    role = models.CharField(max_length=20, choices=ROLE_CHOICES, default='member')
+    role = models.CharField(max_length=20, choices=ROLE_CHOICES, default=ROLE_MEMBER)
     is_active = models.BooleanField(default=True)
-
-    created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
-    invited_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name='+')
+    invited_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name='invited_members')
 
     class Meta:
         unique_together = ('user', 'organization')
@@ -44,32 +47,33 @@ class Membership(models.Model):
         ]
 
     def __str__(self):
-        return f"{self.user.email} - {self.organization.name} ({self.role})"
+        return f"{self.user} - {self.organization} ({self.role})"
 
-class Invitation(models.Model):
-    ROLE_CHOICES = (
-        ('admin', 'Admin'),
-        ('member', 'Member'),
-    )
+class Invitation(BaseModel):
+    """
+    Pending invitation for a user to join an organization.
+    """
+    STATUS_PENDING = 'pending'
+    STATUS_ACCEPTED = 'accepted'
+    STATUS_EXPIRED = 'expired'
+    STATUS_REVOKED = 'revoked'
+    
     STATUS_CHOICES = (
-        ('pending', 'Pending'),
-        ('accepted', 'Accepted'),
-        ('expired', 'Expired'),
-        ('revoked', 'Revoked'),
+        (STATUS_PENDING, _('Pending')),
+        (STATUS_ACCEPTED, _('Accepted')),
+        (STATUS_EXPIRED, _('Expired')),
+        (STATUS_REVOKED, _('Revoked')),
     )
 
-    id = models.UUIDField(primary_key=True, default=uuid4, editable=False)
     email = models.EmailField(db_index=True)
-    organization = models.ForeignKey(Organization, on_delete=models.CASCADE)
-    role = models.CharField(max_length=20, choices=ROLE_CHOICES, default='member')
+    organization = models.ForeignKey(Organization, on_delete=models.CASCADE, related_name='invitations')
+    role = models.CharField(max_length=20, choices=Membership.ROLE_CHOICES, default=Membership.ROLE_MEMBER)
     token = models.CharField(max_length=64, unique=True)
-    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')
-
-    created_at = models.DateTimeField(auto_now_add=True)
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default=STATUS_PENDING)
     expires_at = models.DateTimeField()
-    invited_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='+')
+    invited_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='sent_invitations')
     accepted_at = models.DateTimeField(null=True, blank=True)
-    accepted_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name='+')
+    accepted_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, null=True, blank=True, related_name='accepted_invitations')
 
     def __str__(self):
-        return f"Invite {self.email} to {self.organization.name}"
+        return f"Invite {self.email} to {self.organization}"
