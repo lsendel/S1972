@@ -17,6 +17,7 @@ from apps.core.tasks import send_email_task
 import secrets
 from datetime import timedelta
 from drf_spectacular.utils import extend_schema
+from django.conf import settings
 
 User = get_user_model()
 
@@ -85,11 +86,22 @@ class OrganizationViewSet(viewsets.ModelViewSet):
         )
 
         # Send email
-        # TODO: Use a proper template
-        invite_link = f"http://localhost:5173/invitation/{token}" # Configurable domain
+        invite_link = f"{settings.FRONTEND_URL}/invitation/{token}"
+
+        # In a real app, render_to_string with an HTML template would be used here.
+        # For now, we provide a clean text message.
+        message = (
+            f"Hello,\n\n"
+            f"You have been invited to join the organization '{org.name}' on our platform.\n"
+            f"Please click the link below to accept the invitation:\n\n"
+            f"{invite_link}\n\n"
+            f"This link will expire in 7 days.\n\n"
+            f"Best regards,\nThe Team"
+        )
+
         send_email_task.delay(
             subject=f"Invitation to join {org.name}",
-            message=f"You have been invited to join {org.name}. Click here to accept: {invite_link}",
+            message=message,
             recipient_list=[email]
         )
 

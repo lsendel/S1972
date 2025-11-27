@@ -30,8 +30,8 @@ class TestOrganizationFlow:
 
         response = self.client.get(self.list_create_url)
         assert response.status_code == status.HTTP_200_OK
-        # The pagination class wraps results in 'data'
-        results = response.data['data'] if 'data' in response.data else response.data
+        # Standard PageNumberPagination returns 'results'
+        results = response.data['results'] if 'results' in response.data else response.data
 
         assert len(results) >= 1
         assert results[0]["slug"] == "org-1"
