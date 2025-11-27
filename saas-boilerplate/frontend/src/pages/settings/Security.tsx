@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { useForm } from "react-hook-form"
 import client from "@/api/client"
+import TwoFactorAuth from "@/components/TwoFactorAuth"
 
 export default function SecuritySettings() {
   const { register, handleSubmit, reset, watch } = useForm()
@@ -41,16 +42,20 @@ export default function SecuritySettings() {
           </div>
           <div>
             <label className="block text-sm font-medium mb-1">Confirm New Password</label>
-            <Input 
-              type="password" 
-              {...register("confirm_password", { 
+            <Input
+              type="password"
+              {...register("confirm_password", {
                 required: true,
                 validate: value => value === newPassword || "Passwords do not match"
-              })} 
+              })}
             />
           </div>
           <Button type="submit">Change Password</Button>
         </form>
+      </div>
+
+      <div className="rounded-lg border bg-white p-6">
+        <TwoFactorAuth />
       </div>
     </div>
   )
