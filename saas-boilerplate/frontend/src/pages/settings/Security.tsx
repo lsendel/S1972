@@ -4,6 +4,7 @@ import { Input } from "@/components/ui/input"
 import { useForm } from "react-hook-form"
 import client from "@/api/client"
 import TwoFactorAuth from "@/components/TwoFactorAuth"
+import OAuthConnections from "@/components/OAuthConnections"
 
 export default function SecuritySettings() {
   const { register, handleSubmit, reset, watch } = useForm()
@@ -56,6 +57,10 @@ export default function SecuritySettings() {
 
       <div className="rounded-lg border bg-white p-6">
         <TwoFactorAuth />
+      </div>
+
+      <div className="rounded-lg border bg-white p-6">
+        <OAuthConnections />
       </div>
     </div>
   )

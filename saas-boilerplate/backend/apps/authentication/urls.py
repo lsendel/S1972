@@ -11,4 +11,7 @@ urlpatterns = [
 
     # 2FA/TOTP endpoints
     path('', include('apps.authentication.totp_urls')),
+
+    # OAuth endpoints
+    path('', include('apps.authentication.oauth_urls')),
 ]
