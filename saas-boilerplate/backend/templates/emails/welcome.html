@@ -1,0 +1,8 @@
+{% extends "emails/base.html" %}
+
+{% block content %}
+<h2>Welcome, {{ user.full_name|default:user.email }}!</h2>
+<p>Thanks for signing up for SaaS Boilerplate. We're excited to have you on board.</p>
+<p>To get started, please verify your email address:</p>
+<a href="{{ verification_url }}" class="button">Verify Email</a>
+{% endblock %}

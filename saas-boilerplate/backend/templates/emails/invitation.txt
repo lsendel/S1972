@@ -1,0 +1,13 @@
+You've Been Invited!
+===================
+
+Hi,
+
+{{ invited_by }} has invited you to join {{ organization_name }}.
+
+Visit this link to accept the invitation:
+{{ invitation_url }}
+
+This invitation will expire in 7 days.
+
+If you don't want to accept this invitation, you can safely ignore this email.

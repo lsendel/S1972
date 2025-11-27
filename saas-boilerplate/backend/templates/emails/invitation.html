@@ -1,0 +1,11 @@
+{% extends "emails/base.html" %}
+
+{% block content %}
+<h2>You've Been Invited!</h2>
+<p>Hi,</p>
+<p>{{ invited_by }} has invited you to join <strong>{{ organization_name }}</strong>.</p>
+<p>Click the button below to accept the invitation and get started:</p>
+<a href="{{ invitation_url }}" class="button">Accept Invitation</a>
+<p>This invitation will expire in 7 days.</p>
+<p>If you don't want to accept this invitation, you can safely ignore this email.</p>
+{% endblock %}
