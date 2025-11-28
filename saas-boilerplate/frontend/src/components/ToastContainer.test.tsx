@@ -10,6 +10,7 @@ function TestComponent() {
   return (
     <div>
       <button onClick={() => toast.success('Success message')}>Show Success</button>
+      <button onClick={() => toast.success('Short message', 500)}>Show Short</button>
       <button onClick={() => toast.error('Error message')}>Show Error</button>
       <button onClick={() => toast.warning('Warning message')}>Show Warning</button>
       <button onClick={() => toast.info('Info message')}>Show Info</button>
@@ -111,8 +112,7 @@ describe('ToastContainer', () => {
   })
 
   it('auto-dismisses toast after duration', async () => {
-    vi.useFakeTimers()
-    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
+    const user = userEvent.setup()
 
     render(
       <ToastProvider>
@@ -120,21 +120,14 @@ describe('ToastContainer', () => {
       </ToastProvider>
     )
 
-    await user.click(screen.getByText('Show Success'))
+    await user.click(screen.getByText('Show Short'))
 
     await waitFor(() => {
-      expect(screen.getByText('Success message')).toBeInTheDocument()
-    })
-
-    // Fast-forward time
-    act(() => {
-      vi.advanceTimersByTime(6000)
+      expect(screen.getByText('Short message')).toBeInTheDocument()
     })
 
     await waitFor(() => {
-      expect(screen.queryByText('Success message')).not.toBeInTheDocument()
-    })
-
-    vi.useRealTimers()
-  }, 10000)
+      expect(screen.queryByText('Short message')).not.toBeInTheDocument()
+    }, { timeout: 2000 })
+  })
 })

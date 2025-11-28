@@ -49,7 +49,8 @@ describe('OAuthConnections Component', () => {
       render(<OAuthConnections />)
 
       await waitFor(() => {
-        const connectButtons = screen.getAllByText(/connect/i)
+        // Use exact match to avoid matching "Disconnect"
+        const connectButtons = screen.getAllByRole('button', { name: /^connect$/i })
         expect(connectButtons).toHaveLength(2)
       })
     })
@@ -96,7 +97,10 @@ describe('OAuthConnections Component', () => {
       render(<OAuthConnections />)
 
       await waitFor(() => {
-        expect(screen.getByText(/connected/i)).toBeInTheDocument()
+        // Check for the connected status indicator (not the heading)
+        const connectedStatuses = screen.getAllByText('Connected')
+        // Should find at least one "Connected" status (not counting the "Connected Accounts" heading)
+        expect(connectedStatuses.length).toBeGreaterThan(0)
       })
     })
 
@@ -104,7 +108,8 @@ describe('OAuthConnections Component', () => {
       render(<OAuthConnections />)
 
       await waitFor(() => {
-        expect(screen.getByText('test@gmail.com')).toBeInTheDocument()
+        // Email might be combined with name like "test@gmail.com (Test User)"
+        expect(screen.getByText(/test@gmail\.com/)).toBeInTheDocument()
       })
     })
 
@@ -112,7 +117,7 @@ describe('OAuthConnections Component', () => {
       render(<OAuthConnections />)
 
       await waitFor(() => {
-        expect(screen.getByText(/disconnect/i)).toBeInTheDocument()
+        expect(screen.getByRole('button', { name: /disconnect/i })).toBeInTheDocument()
       })
     })
 
@@ -121,7 +126,8 @@ describe('OAuthConnections Component', () => {
 
       await waitFor(() => {
         // Should have one Connect button (for GitHub)
-        const connectButtons = screen.getAllByRole('button', { name: /connect/i })
+        // Use exact match to avoid matching "Disconnect"
+        const connectButtons = screen.getAllByRole('button', { name: /^connect$/i })
         expect(connectButtons).toHaveLength(1)
       })
     })
@@ -146,17 +152,19 @@ describe('OAuthConnections Component', () => {
 
     it('redirects to OAuth URL when connect is clicked', async () => {
       const user = userEvent.setup()
-        ; (client.get as any).mockResolvedValueOnce({
-          authorization_url: 'https://accounts.google.com/oauth',
-        })
 
       render(<OAuthConnections />)
 
       await waitFor(() => {
-        expect(screen.getByText(/connect/i)).toBeInTheDocument()
+        expect(screen.getByRole('button', { name: /^connect$/i })).toBeInTheDocument()
       })
 
-      await user.click(screen.getByText(/connect/i))
+      // Mock the authorize endpoint call
+      ;(client.get as any).mockResolvedValueOnce({
+        authorization_url: 'https://accounts.google.com/oauth',
+      })
+
+      await user.click(screen.getByRole('button', { name: /^connect$/i }))
 
       await waitFor(() => {
         expect(window.location.href).toBe('https://accounts.google.com/oauth')
@@ -197,10 +205,10 @@ describe('OAuthConnections Component', () => {
       render(<OAuthConnections />)
 
       await waitFor(() => {
-        expect(screen.getByText(/disconnect/i)).toBeInTheDocument()
+        expect(screen.getByRole('button', { name: /disconnect/i })).toBeInTheDocument()
       })
 
-      await user.click(screen.getByText(/disconnect/i))
+      await user.click(screen.getByRole('button', { name: /disconnect/i }))
 
       expect(confirmSpy).toHaveBeenCalled()
       confirmSpy.mockRestore()
@@ -214,10 +222,10 @@ describe('OAuthConnections Component', () => {
       render(<OAuthConnections />)
 
       await waitFor(() => {
-        expect(screen.getByText(/disconnect/i)).toBeInTheDocument()
+        expect(screen.getByRole('button', { name: /disconnect/i })).toBeInTheDocument()
       })
 
-      await user.click(screen.getByText(/disconnect/i))
+      await user.click(screen.getByRole('button', { name: /disconnect/i }))
 
       await waitFor(() => {
         expect(client.post).toHaveBeenCalledWith('/auth/oauth/disconnect/google/')

@@ -176,7 +176,7 @@ export default function OAuthConnections() {
             )
           })}
 
-          {providers?.providers.length === 0 && (
+          {providers?.providers?.length === 0 && (
             <div className="text-center py-8 text-gray-500">
               No OAuth providers configured. Please add OAuth credentials to your environment variables.
             </div>

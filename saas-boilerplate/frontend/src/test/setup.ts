@@ -1,10 +1,45 @@
 import '@testing-library/jest-dom';
 import { cleanup } from '@testing-library/react';
-import { afterEach, vi } from 'vitest';
+import { afterEach, vi, beforeAll } from 'vitest';
 
 // Cleanup after each test case (e.g. clearing jsdom)
 afterEach(() => {
   cleanup();
+});
+
+// Suppress non-critical console warnings during tests
+beforeAll(() => {
+  const originalError = console.error;
+  const originalWarn = console.warn;
+
+  console.error = (...args: any[]) => {
+    // Suppress React Router v7 future flag warnings
+    if (
+      typeof args[0] === 'string' &&
+      args[0].includes('React Router Future Flag Warning')
+    ) {
+      return;
+    }
+    // Suppress React act() warnings - these are handled by Testing Library's waitFor
+    if (
+      typeof args[0] === 'string' &&
+      args[0].includes('not wrapped in act(...)')
+    ) {
+      return;
+    }
+    originalError.call(console, ...args);
+  };
+
+  console.warn = (...args: any[]) => {
+    // Suppress React Router v7 future flag warnings
+    if (
+      typeof args[0] === 'string' &&
+      args[0].includes('React Router Future Flag Warning')
+    ) {
+      return;
+    }
+    originalWarn.call(console, ...args);
+  };
 });
 
 // Mock IntersectionObserver

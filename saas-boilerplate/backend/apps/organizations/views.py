@@ -24,7 +24,7 @@ class OrganizationViewSet(viewsets.ModelViewSet):
         ).annotate(
             user_role=F('memberships__role'),
             member_count=Count('memberships')
-        )
+        ).order_by('-created_at')
 
     def perform_create(self, serializer):
         org = serializer.save(slug=uuid.uuid4().hex[:12]) # Simple slug generation

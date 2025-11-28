@@ -27,7 +27,14 @@ const AllTheProviders = ({ children }: AllTheProvidersProps) => {
 
   return (
     <QueryClientProvider client={testQueryClient}>
-      <BrowserRouter>{children}</BrowserRouter>
+      <BrowserRouter
+        future={{
+          v7_startTransition: true,
+          v7_relativeSplatPath: true,
+        }}
+      >
+        {children}
+      </BrowserRouter>
     </QueryClientProvider>
   )
 }
