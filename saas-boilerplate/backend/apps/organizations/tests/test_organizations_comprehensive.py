@@ -14,7 +14,8 @@ from unittest.mock import patch
 from django.urls import reverse
 from django.utils import timezone
 from rest_framework import status
-from apps.organizations.models import Organization, Membership, Invitation
+from apps.organizations.models import Organization, Membership
+from apps.invitations.models import Invitation
 from apps.organizations.tests.factories import OrganizationFactory, MembershipFactory, InvitationFactory
 from apps.accounts.tests.factories import UserFactory
 

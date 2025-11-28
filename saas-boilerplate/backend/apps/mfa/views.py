@@ -6,7 +6,7 @@ from django.db import transaction
 from django.core.cache import cache
 from apps.accounts.models import TOTPDevice, BackupCode
 from drf_spectacular.utils import extend_schema
-from .totp_serializers import (
+from .serializers import (
     TOTPDeviceSerializer, TOTPSetupSerializer, TOTPVerifySerializer,
     TOTPEnableSerializer, BackupCodeSerializer, BackupCodeVerifySerializer,
     PasswordConfirmationSerializer

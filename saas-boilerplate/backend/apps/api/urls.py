@@ -20,6 +20,7 @@ urlpatterns = [
 
     # API v1 endpoints
     path('v1/auth/', include('apps.authentication.urls')),
+    path('v1/auth/', include('apps.mfa.urls')), # MFA endpoints were previously under auth
     path('v1/users/', include('apps.accounts.urls')),
     path('v1/organizations/', include('apps.organizations.urls')),
     path('v1/subscriptions/', include('apps.subscriptions.urls')),

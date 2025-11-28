@@ -1,6 +1,8 @@
 from django.urls import path, include
 from rest_framework_nested import routers
-from .views import OrganizationViewSet, MemberViewSet, InvitationViewSet
+from .views import OrganizationViewSet, MemberViewSet
+# Import InvitationViewSet from the new app
+from apps.invitations.views import InvitationViewSet
 
 router = routers.SimpleRouter()
 router.register(r'', OrganizationViewSet, basename='organization')

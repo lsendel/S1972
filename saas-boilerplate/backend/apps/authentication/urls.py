@@ -12,9 +12,6 @@ urlpatterns = [
     path('email/verify/', VerifyEmailView.as_view(), name='verify_email'),
     path('me/', UserMeView.as_view(), name='user_me'),
 
-    # 2FA/TOTP endpoints
-    path('', include('apps.authentication.totp_urls')),
-
     # OAuth endpoints
     path('', include('apps.authentication.oauth_urls')),
 ]

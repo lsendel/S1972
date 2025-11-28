@@ -3,12 +3,13 @@ from rest_framework.response import Response
 from django.shortcuts import get_object_or_404
 from django.db.models import Count, F, Value, CharField
 from django.utils import timezone
-from .models import Organization, Membership, Invitation
+from .models import Organization, Membership
 from .serializers import (
     OrganizationSerializer, MembershipSerializer, 
-    InvitationSerializer, CreateInvitationSerializer
+    CreateInvitationSerializer
 )
-from apps.core.tasks import send_email_task
+# Use the new service
+from apps.invitations.services import create_and_send_invitation
 from django.conf import settings
 import uuid
 
@@ -95,56 +96,10 @@ class MemberViewSet(mixins.RetrieveModelMixin,
         email = serializer.validated_data['email']
         role = serializer.validated_data['role']
 
-        # Check if already a member
-        if Membership.objects.filter(organization=org, user__email=email).exists():
-            return Response({"detail": "User is already a member"}, status=status.HTTP_400_BAD_REQUEST)
+        # Use new service to create and send invitation
+        invitation, created = create_and_send_invitation(org, email, role, request.user)
 
-        # Create invitation
-        invitation, token = Invitation.create_invitation(
-            organization=org,
-            email=email,
-            role=role,
-            invited_by=request.user,
-            expires_at=timezone.now() + timezone.timedelta(days=7)
-        )
-
-        # Send email
-        accept_url = f"{settings.FRONTEND_URL}/invitations/{token}"
-        send_email_task.delay(
-            subject=f"You've been invited to join {org.name}",
-            recipient_list=[email],
-            template_name="emails/invitation.html",
-            context={
-                "inviter_name": request.user.full_name,
-                "organization_name": org.name,
-                "accept_url": accept_url
-            }
-        )
+        if invitation is None:
+             return Response({"detail": "User is already a member"}, status=status.HTTP_400_BAD_REQUEST)
 
         return Response({"detail": "Invitation sent"}, status=status.HTTP_201_CREATED)
-
-class InvitationViewSet(mixins.RetrieveModelMixin,
-                        mixins.DestroyModelMixin,
-                        mixins.ListModelMixin,
-                        viewsets.GenericViewSet):
-    serializer_class = InvitationSerializer
-    permission_classes = [permissions.IsAuthenticated]
-    pagination_class = None
-
-    def get_queryset(self):
-        org_slug = self.kwargs.get('organization_slug')
-        return Invitation.objects.filter(
-            organization__slug=org_slug,
-            status=Invitation.STATUS_PENDING
-        )
-
-    def destroy(self, request, *args, **kwargs):
-        instance = self.get_object()
-        # Check permissions
-        membership = instance.organization.memberships.filter(user=request.user).first()
-        if not membership or membership.role not in [Membership.ROLE_OWNER, Membership.ROLE_ADMIN]:
-             return Response({"detail": "Permission denied"}, status=status.HTTP_403_FORBIDDEN)
-        
-        instance.status = Invitation.STATUS_REVOKED
-        instance.save()
-        return Response(status=status.HTTP_204_NO_CONTENT)
