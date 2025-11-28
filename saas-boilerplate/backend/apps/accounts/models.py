@@ -3,17 +3,17 @@ from django.db import models
 from django.utils.translation import gettext_lazy as _
 from django.utils import timezone
 from django.contrib.auth.hashers import make_password, check_password
-import uuid
 import secrets
 import pyotp
 from .managers import UserManager
 from apps.core.fields import EncryptedCharField
+from apps.core.models import BaseModel
 
-class User(AbstractBaseUser, PermissionsMixin):
+class User(BaseModel, AbstractBaseUser, PermissionsMixin):
     """
     Custom User model using email as the unique identifier.
     """
-    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    # id is inherited from BaseModel
     email = models.EmailField(_('email address'), unique=True, db_index=True)
     full_name = models.CharField(_('full name'), max_length=255, blank=True)
     avatar_url = models.URLField(blank=True, null=True)
@@ -57,7 +57,7 @@ class User(AbstractBaseUser, PermissionsMixin):
         return self.email.split('@')[0]
 
 
-class TOTPDevice(models.Model):
+class TOTPDevice(BaseModel):
     """
     TOTP device for two-factor authentication.
     Stores the secret key (encrypted at rest) and device metadata.
@@ -65,12 +65,12 @@ class TOTPDevice(models.Model):
     Security: The TOTP secret is encrypted using Fernet (AES-128) to prevent
     compromise if the database is breached.
     """
-    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    # id and created_at are inherited from BaseModel
+    # updated_at is also inherited from BaseModel
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='totp_device')
     secret = EncryptedCharField(max_length=255, help_text=_('Encrypted base32 encoded TOTP secret'))
     name = models.CharField(max_length=64, default='Default', help_text=_('Device name'))
     confirmed = models.BooleanField(default=False, help_text=_('Whether the device has been confirmed'))
-    created_at = models.DateTimeField(auto_now_add=True)
     last_used_at = models.DateTimeField(null=True, blank=True)
 
     class Meta:
@@ -108,17 +108,17 @@ class TOTPDevice(models.Model):
         )
 
 
-class BackupCode(models.Model):
+class BackupCode(BaseModel):
     """
     Backup codes for account recovery when TOTP device is unavailable.
     Codes are hashed before storage for security.
     """
-    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    # id and created_at are inherited from BaseModel
+    # updated_at is also inherited from BaseModel
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='backup_codes')
     code_hash = models.CharField(max_length=255, help_text=_('Hashed backup code'))
     used = models.BooleanField(default=False)
     used_at = models.DateTimeField(null=True, blank=True)
-    created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
         verbose_name = _('backup code')

@@ -1,8 +1,9 @@
 from django.db import models
 from django.conf import settings
 from django.utils.translation import gettext_lazy as _
+from apps.core.models import BaseModel
 
-class Notification(models.Model):
+class Notification(BaseModel):
     class Level(models.TextChoices):
         INFO = 'info', _('Info')
         SUCCESS = 'success', _('Success')
@@ -22,7 +23,8 @@ class Notification(models.Model):
         default=Level.INFO
     )
     is_read = models.BooleanField(default=False)
-    created_at = models.DateTimeField(auto_now_add=True)
+    # created_at is inherited from BaseModel
+    # updated_at is inherited from BaseModel
     data = models.JSONField(default=dict, blank=True)
 
     class Meta:
