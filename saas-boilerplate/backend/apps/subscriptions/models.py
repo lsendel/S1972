@@ -1,6 +1,6 @@
 from django.db import models
-from uuid import uuid4
 from apps.organizations.models import Organization
+from apps.core.models import TenantOneToOneModel
 
 class Plan(models.Model):
     id = models.CharField(primary_key=True, max_length=50) # e.g. 'starter'
@@ -21,7 +21,7 @@ class Plan(models.Model):
     def __str__(self):
         return self.name
 
-class Subscription(models.Model):
+class Subscription(TenantOneToOneModel):
     BILLING_CYCLE_CHOICES = (
         ('monthly', 'Monthly'),
         ('yearly', 'Yearly'),
@@ -35,8 +35,6 @@ class Subscription(models.Model):
         ('incomplete', 'Incomplete'),
     )
 
-    id = models.UUIDField(primary_key=True, default=uuid4, editable=False)
-    organization = models.OneToOneField(Organization, on_delete=models.CASCADE, related_name='subscription')
     plan = models.ForeignKey(Plan, on_delete=models.PROTECT)
 
     stripe_subscription_id = models.CharField(max_length=255, unique=True, null=True, blank=True)
@@ -49,9 +47,6 @@ class Subscription(models.Model):
     status = models.CharField(max_length=20, choices=STATUS_CHOICES)
     cancel_at_period_end = models.BooleanField(default=False)
     trial_end = models.DateTimeField(null=True, blank=True)
-
-    created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
         indexes = [
