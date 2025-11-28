@@ -35,3 +35,6 @@ dist/
 .vscode/
 coverage.xml
 *.log
+test-results/
+playwright-report/
+test_output.txt
