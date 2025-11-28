@@ -1,15 +1,31 @@
 name: Backend Tests
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  id-token: write
+
 on:
   push:
     branches: [main, develop]
     paths:
       - 'saas-boilerplate/backend/**'
+      - 'saas-boilerplate/docker-compose.yml'
+      - 'saas-boilerplate/Makefile'
+      - 'Makefile'
+      - 'docker-compose*.yml'
       - '.github/workflows/backend-tests.yml'
   pull_request:
     branches: [main, develop]
     paths:
       - 'saas-boilerplate/backend/**'
+      - 'saas-boilerplate/docker-compose.yml'
+      - 'saas-boilerplate/Makefile'
+      - 'Makefile'
+      - 'docker-compose*.yml'
       - '.github/workflows/backend-tests.yml'
 
 jobs:
@@ -50,13 +66,31 @@ jobs:
         with:
           python-version: '3.12'
           cache: 'pip'
+          cache-dependency-path: ./saas-boilerplate/backend/pyproject.toml
 
       - name: Install dependencies
         working-directory: ./saas-boilerplate/backend
         run: |
           python -m pip install --upgrade pip
-          pip install -e .
-          pip install pytest pytest-django pytest-cov
+          pip install -e ".[dev]"
+
+      - name: Django system checks
+        working-directory: ./saas-boilerplate/backend
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/test_db
+          REDIS_URL: redis://localhost:6379/0
+          DJANGO_SETTINGS_MODULE: config.settings.test
+        run: |
+          python manage.py check --fail-level=ERROR
+
+      - name: Check for missing migrations
+        working-directory: ./saas-boilerplate/backend
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/test_db
+          REDIS_URL: redis://localhost:6379/0
+          DJANGO_SETTINGS_MODULE: config.settings.test
+        run: |
+          python manage.py makemigrations --check --dry-run --no-input
 
       - name: Run migrations
         working-directory: ./saas-boilerplate/backend
@@ -67,6 +101,15 @@ jobs:
         run: |
           python manage.py migrate --no-input
 
+      - name: Collect static files
+        working-directory: ./saas-boilerplate/backend
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/test_db
+          REDIS_URL: redis://localhost:6379/0
+          DJANGO_SETTINGS_MODULE: config.settings.test
+        run: |
+          python manage.py collectstatic --no-input
+
       - name: Run tests with coverage
         working-directory: ./saas-boilerplate/backend
         env:
@@ -74,14 +117,25 @@ jobs:
           REDIS_URL: redis://localhost:6379/0
           DJANGO_SETTINGS_MODULE: config.settings.test
         run: |
-          pytest --cov=apps --cov-report=xml --cov-report=term-missing
+          pytest --cov=apps --cov-report=xml --cov-report=term-missing --cov-fail-under=80
+
+      - name: Type check (mypy)
+        working-directory: ./saas-boilerplate/backend
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/test_db
+          REDIS_URL: redis://localhost:6379/0
+          DJANGO_SETTINGS_MODULE: config.settings.test
+        run: |
+          python -m mypy apps config
 
       - name: Upload coverage to Codecov
-        uses: codecov/codecov-action@v3
+        uses: codecov/codecov-action@v4
         with:
           files: ./saas-boilerplate/backend/coverage.xml
           flags: backend
           name: backend-coverage
+          use_oidc: true
+          fail_ci_if_error: true
 
   lint:
     runs-on: ubuntu-latest
@@ -94,22 +148,23 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: '3.12'
+          cache: 'pip'
+          cache-dependency-path: ./saas-boilerplate/backend/pyproject.toml
 
       - name: Install linting tools
+        working-directory: ./saas-boilerplate/backend
         run: |
-          pip install ruff black isort
+          python -m pip install --upgrade pip
+          pip install -e ".[dev]"
 
       - name: Run ruff
         working-directory: ./saas-boilerplate/backend
         run: |
           ruff check .
 
-      - name: Check code formatting with black
+      - name: Run mypy
         working-directory: ./saas-boilerplate/backend
+        env:
+          DJANGO_SETTINGS_MODULE: config.settings.development
         run: |
-          black --check .
-
-      - name: Check import sorting with isort
-        working-directory: ./saas-boilerplate/backend
-        run: |
-          isort --check-only .
+          mypy apps config

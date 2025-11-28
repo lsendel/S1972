@@ -305,7 +305,7 @@ class TestInviteMember:
         response = authenticated_client.post(url, data)
 
         assert response.status_code == status.HTTP_403_FORBIDDEN
-        assert 'permission' in response.data['detail'].lower()
+        assert 'admins and owners' in response.data['errors'][0]['message'].lower()
 
     @patch('apps.core.tasks.send_email_task.delay')
     def test_invite_existing_member(self, mock_email, authenticated_client, user, organization):

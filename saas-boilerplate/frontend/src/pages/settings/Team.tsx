@@ -6,12 +6,25 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { api } from "@/api/config"
-import { Loader2, Mail, Shield, User } from "lucide-react"
+import { membersApi } from "@/api/members"
+import { Loader2, Mail, Shield, User, Trash2 } from "lucide-react"
 import { useToast } from "@/hooks/useToast"
 import { z } from "zod"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { type ApiError, RoleEnum } from "@/api/generated"
+import { useAuth } from "@/hooks/useAuth"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog"
 
 const inviteSchema = z.object({
   email: z.string().email("Please enter a valid email address"),
@@ -24,6 +37,7 @@ export default function TeamSettings() {
   const { orgSlug } = useParams<{ orgSlug: string }>()
   const queryClient = useQueryClient()
   const { success, error } = useToast()
+  const { user } = useAuth()
   const [showInviteForm, setShowInviteForm] = useState(false)
 
   const { register, handleSubmit, reset, formState: { errors } } = useForm<InviteFormValues>({
@@ -45,6 +59,9 @@ export default function TeamSettings() {
     enabled: !!orgSlug,
   })
 
+  const currentUserMembership = members?.find(m => m.user === user?.id)
+  const canManage = currentUserMembership?.role === RoleEnum.OWNER || currentUserMembership?.role === RoleEnum.ADMIN
+
   const inviteMutation = useMutation({
     mutationFn: (data: InviteFormValues) =>
       api.organizations.organizationsMembersInviteCreate({
@@ -59,8 +76,42 @@ export default function TeamSettings() {
       setShowInviteForm(false)
     },
     onError: (err: ApiError) => {
-      const body = err.body as { error?: string }
-      error(body?.error ?? 'Failed to send invitation')
+      const body = err.body as { error?: string, detail?: string }
+      error(body?.detail || body?.error || 'Failed to send invitation')
+    },
+  })
+
+  const updateRoleMutation = useMutation({
+    mutationFn: ({ memberId, role }: { memberId: number, role: 'admin' | 'member' }) =>
+      membersApi.updateRole(orgSlug!, memberId, role),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ['organizations', orgSlug, 'members'] })
+      success('Member role updated successfully')
+    },
+    onError: (err: any) => {
+      error(err.response?.data?.detail || 'Failed to update role')
+    },
+  })
+
+  const removeMemberMutation = useMutation({
+    mutationFn: (memberId: number) => membersApi.removeMember(orgSlug!, memberId),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ['organizations', orgSlug, 'members'] })
+      success('Member removed successfully')
+    },
+    onError: (err: any) => {
+      error(err.response?.data?.detail || 'Failed to remove member')
+    },
+  })
+
+  const revokeInvitationMutation = useMutation({
+    mutationFn: (invitationId: number) => membersApi.revokeInvitation(orgSlug!, invitationId),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ['organizations', orgSlug, 'invitations'] })
+      success('Invitation revoked successfully')
+    },
+    onError: (err: any) => {
+      error(err.response?.data?.detail || 'Failed to revoke invitation')
     },
   })
 
@@ -87,7 +138,7 @@ export default function TeamSettings() {
               Invite and manage team members.
             </CardDescription>
           </div>
-          {!showInviteForm && (
+          {!showInviteForm && canManage && (
             <Button onClick={() => setShowInviteForm(true)}>Invite Member</Button>
           )}
         </CardHeader>
@@ -149,9 +200,60 @@ export default function TeamSettings() {
                     <div className="text-sm text-muted-foreground">{member.user_email}</div>
                   </div>
                 </div>
-                <div className="flex items-center gap-2">
-                  {member.role === RoleEnum.OWNER && <Shield className="h-4 w-4 text-primary" />}
-                  <span className="text-sm capitalize text-muted-foreground">{member.role}</span>
+                <div className="flex items-center gap-4">
+                  {member.role === RoleEnum.OWNER ? (
+                    <div className="flex items-center gap-2">
+                      <Shield className="h-4 w-4 text-primary" />
+                      <span className="text-sm font-medium">Owner</span>
+                    </div>
+                  ) : (
+                    <div className="flex items-center gap-2">
+                      {canManage && member.user !== user?.id ? (
+                        <select
+                          value={member.role}
+                          onChange={(e) => updateRoleMutation.mutate({
+                            memberId: member.id!,
+                            role: e.target.value as 'admin' | 'member'
+                          })}
+                          disabled={updateRoleMutation.isPending}
+                          className="h-8 rounded-md border border-input bg-background px-2 text-sm"
+                        >
+                          <option value="admin">Admin</option>
+                          <option value="member">Member</option>
+                        </select>
+                      ) : (
+                        <span className="text-sm capitalize text-muted-foreground">{member.role}</span>
+                      )}
+
+                      {canManage && member.user !== user?.id && (
+                        <AlertDialog>
+                          <AlertDialogTrigger asChild>
+                            <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:text-destructive/90">
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </AlertDialogTrigger>
+                          <AlertDialogContent>
+                            <AlertDialogHeader>
+                              <AlertDialogTitle>Remove team member?</AlertDialogTitle>
+                              <AlertDialogDescription>
+                                This will remove {member.user_full_name || member.user_email} from the organization.
+                                They will lose access to all organization resources.
+                              </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                              <AlertDialogCancel>Cancel</AlertDialogCancel>
+                              <AlertDialogAction
+                                onClick={() => removeMemberMutation.mutate(member.id!)}
+                                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                              >
+                                Remove
+                              </AlertDialogAction>
+                            </AlertDialogFooter>
+                          </AlertDialogContent>
+                        </AlertDialog>
+                      )}
+                    </div>
+                  )}
                 </div>
               </div>
             ))}
@@ -180,9 +282,22 @@ export default function TeamSettings() {
                       <div className="text-sm text-muted-foreground">Invited by {invitation.invited_by_email}</div>
                     </div>
                   </div>
-                  <span className="rounded-full bg-muted px-3 py-1 text-xs font-medium capitalize">
-                    {invitation.role}
-                  </span>
+                  <div className="flex items-center gap-4">
+                    <span className="rounded-full bg-muted px-3 py-1 text-xs font-medium capitalize">
+                      {invitation.role}
+                    </span>
+                    {canManage && (
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8 text-destructive hover:text-destructive/90"
+                        onClick={() => revokeInvitationMutation.mutate(invitation.id!)}
+                        disabled={revokeInvitationMutation.isPending}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    )}
+                  </div>
                 </div>
               ))}
             </div>
