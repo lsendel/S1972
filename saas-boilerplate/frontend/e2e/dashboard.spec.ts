@@ -21,6 +21,7 @@ test.describe('Dashboard and Organization Flow', () => {
 
     test('should show organization switcher', async ({ page }) => {
       await page.goto(`/app/${orgSlug}`)
+      await verifyPageLoaded(page)
 
       // Look for organization name in sidebar
       const sidebar = page.locator('aside, nav, [role="navigation"]')
@@ -31,33 +32,41 @@ test.describe('Dashboard and Organization Flow', () => {
   test.describe('Settings Navigation', () => {
     test('should navigate to profile settings', async ({ page }) => {
       await page.goto(`/app/${orgSlug}`)
+      await verifyPageLoaded(page)
       await page.getByRole('link', { name: /profile/i }).click()
 
       await expect(page).toHaveURL(/\/settings\/profile/)
+      await verifyPageLoaded(page)
       await expect(page.getByRole('heading', { name: /profile settings/i })).toBeVisible()
     })
 
     test('should navigate to security settings', async ({ page }) => {
       await page.goto(`/app/${orgSlug}`)
+      await verifyPageLoaded(page)
       await page.getByRole('link', { name: /security/i }).click()
 
       await expect(page).toHaveURL(/\/settings\/security/)
+      await verifyPageLoaded(page)
       await expect(page.getByRole('heading', { name: /security settings/i })).toBeVisible()
     })
 
     test('should navigate to team settings', async ({ page }) => {
       await page.goto(`/app/${orgSlug}`)
+      await verifyPageLoaded(page)
       await page.getByRole('link', { name: /team/i }).click()
 
       await expect(page).toHaveURL(/\/settings\/team/)
+      await verifyPageLoaded(page)
       await expect(page.getByRole('heading', { name: /team settings/i })).toBeVisible()
     })
 
     test('should navigate to billing settings', async ({ page }) => {
       await page.goto(`/app/${orgSlug}`)
+      await verifyPageLoaded(page)
       await page.getByRole('link', { name: /billing/i }).click()
 
       await expect(page).toHaveURL(/\/settings\/billing/)
+      await verifyPageLoaded(page)
       await expect(page.getByRole('heading', { name: /billing/i })).toBeVisible()
     })
   })
@@ -65,6 +74,7 @@ test.describe('Dashboard and Organization Flow', () => {
   test.describe('Team Management', () => {
     test('should show invite member form', async ({ page }) => {
       await page.goto(`/app/${orgSlug}/settings/team`)
+      await verifyPageLoaded(page)
 
       await expect(page.getByLabel(/email/i)).toBeVisible()
       await expect(page.getByRole('button', { name: /invite/i })).toBeVisible()
@@ -72,6 +82,7 @@ test.describe('Dashboard and Organization Flow', () => {
 
     test('should validate email for team invitation', async ({ page }) => {
       await page.goto(`/app/${orgSlug}/settings/team`)
+      await verifyPageLoaded(page)
 
       const emailInput = page.getByLabel(/email/i).first()
       await emailInput.fill('invalid-email')
@@ -85,8 +96,8 @@ test.describe('Dashboard and Organization Flow', () => {
 
   test.describe('Security Settings', () => {
     test('should show password change form', async ({ page }) => {
-      const orgSlug = process.env.TEST_ORG_SLUG || 'test-org'
       await page.goto(`/app/${orgSlug}/settings/security`)
+      await verifyPageLoaded(page)
 
       await expect(page.getByRole('heading', { name: /change password/i })).toBeVisible()
       await expect(page.getByLabel(/current password/i)).toBeVisible()
@@ -94,15 +105,15 @@ test.describe('Dashboard and Organization Flow', () => {
     })
 
     test('should show 2FA section', async ({ page }) => {
-      const orgSlug = process.env.TEST_ORG_SLUG || 'test-org'
       await page.goto(`/app/${orgSlug}/settings/security`)
+      await verifyPageLoaded(page)
 
       await expect(page.getByRole('heading', { name: /two-factor authentication/i })).toBeVisible()
     })
 
     test('should show OAuth connections', async ({ page }) => {
-      const orgSlug = process.env.TEST_ORG_SLUG || 'test-org'
       await page.goto(`/app/${orgSlug}/settings/security`)
+      await verifyPageLoaded(page)
 
       await expect(page.getByRole('heading', { name: /connected accounts/i })).toBeVisible()
     })
@@ -111,12 +122,14 @@ test.describe('Dashboard and Organization Flow', () => {
   test.describe('Error Handling', () => {
     test('should show 404 page for non-existent routes', async ({ page }) => {
       await page.goto('/this-route-does-not-exist')
+      await verifyPageLoaded(page)
       
       await expect(page.getByText(/404|not found/i)).toBeVisible()
     })
 
     test('should have go home button on error page', async ({ page }) => {
       await page.goto('/this-route-does-not-exist')
+      await verifyPageLoaded(page)
       
       const goHomeButton = page.getByRole('button', { name: /go home/i })
       await expect(goHomeButton).toBeVisible()

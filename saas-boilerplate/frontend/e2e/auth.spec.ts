@@ -9,40 +9,40 @@ test.describe('Authentication Flow', () => {
   test('should redirect to login page from root', async ({ page }) => {
     await expect(page).toHaveURL(/\/login/)
     await verifyPageLoaded(page)
-    await expect(page.getByRole('heading', { name: /sign in to your account/i })).toBeVisible()
+    await expect(page.getByRole('heading', { name: /login/i })).toBeVisible()
   })
 
   test('should show validation for empty login form', async ({ page }) => {
     await page.goto('/login')
     await verifyPageLoaded(page)
-    
+
     // Try to submit without filling form
     await page.getByRole('button', { name: /sign in/i }).click()
-    
+
     // HTML5 validation should prevent submission
-    const emailInput = page.getByLabel(/email address/i)
+    const emailInput = page.getByLabel(/email/i)
     await expect(emailInput).toHaveAttribute('required')
   })
 
   test('should navigate to signup page', async ({ page }) => {
     await page.goto('/login')
     await verifyPageLoaded(page)
-    
-    await page.getByRole('link', { name: /start a 14 day free trial/i }).click()
-    
+
+    await page.getByRole('link', { name: /sign up/i }).click()
+
     await expect(page).toHaveURL(/\/signup/)
-    await expect(page.getByRole('heading', { name: /create your account/i })).toBeVisible()
+    await expect(page.getByRole('heading', { name: /create an account/i })).toBeVisible()
   })
 
   test('should navigate to forgot password page', async ({ page }) => {
     await page.goto('/login')
     await verifyPageLoaded(page)
-    
+
     await page.getByRole('link', { name: /forgot password/i }).click()
-    
+
     await expect(page).toHaveURL(/\/forgot-password/)
     await verifyPageLoaded(page)
-    await expect(page.getByRole('heading', { name: /reset your password/i })).toBeVisible()
+    await expect(page.getByRole('heading', { name: /reset password/i })).toBeVisible()
   })
 
   test('should navigate back to login from signup', async ({ page }) => {
@@ -58,13 +58,13 @@ test.describe('Authentication Flow', () => {
   test('should display error for invalid credentials', async ({ page }) => {
     await page.goto('/login')
     await verifyPageLoaded(page)
-    
-    await page.getByLabel(/email address/i).fill('invalid@example.com')
+
+    await page.getByLabel(/^email$/i).fill('invalid@example.com')
     await page.getByLabel(/^password$/i).fill('wrongpassword')
     await page.getByRole('button', { name: /sign in/i }).click()
-    
+
     // Wait for error message (adjust selector based on your actual error handling)
-    await expect(page.locator('text=/failed to login|invalid/i')).toBeVisible({ timeout: 5000 })
+    await expect(page.locator('text=/unable to log in|failed/i')).toBeVisible({ timeout: 5000 })
   })
 
   test.describe('Signup Flow', () => {
@@ -97,10 +97,19 @@ test.describe('Authentication Flow', () => {
     test('should submit forgot password form', async ({ page }) => {
       await page.goto('/forgot-password')
       await verifyPageLoaded(page)
-      
+
+      // Setup listener before clicking
+      const responsePromise = page.waitForResponse(
+        response =>
+          response.url().includes('/password/reset/') &&
+          response.status() >= 200 &&
+          response.status() < 300
+      )
+
       await page.getByLabel(/email/i).fill('test@example.com')
       await page.getByRole('button', { name: /send reset link/i }).click()
-      
+      await responsePromise  // Wait for API
+
       // Should show success message
       await expect(page.locator('text=/check your email|sent/i')).toBeVisible({ timeout: 5000 })
     })

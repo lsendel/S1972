@@ -7,6 +7,9 @@ import { fileURLToPath } from 'url'
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
 
+// Allow skipping the auto-started dev server when one is already running
+const useExternalServer = process.env.PLAYWRIGHT_USE_EXTERNAL_SERVER === '1'
+
 // Load E2E test environment variables
 dotenv.config({ path: path.resolve(__dirname, '.env.e2e') })
 
@@ -64,9 +67,12 @@ export default defineConfig({
   ],
 
   /* Run your local dev server before starting the tests */
-  webServer: {
-    command: 'npm run dev',
-    url: 'http://localhost:5173',
-    reuseExistingServer: !process.env.CI,
-  },
+  webServer: useExternalServer
+    ? undefined
+    : {
+        // Bind explicitly to localhost to avoid sandbox/permission issues on 0.0.0.0
+        command: 'npm run dev -- --host 127.0.0.1 --port 5173',
+        url: 'http://localhost:5173',
+        reuseExistingServer: !process.env.CI,
+      },
 })
