@@ -1,4 +1,4 @@
-import { Page } from '@playwright/test'
+import { Page, expect } from '@playwright/test'
 
 /**
  * Helper function to login as a test user
@@ -49,17 +49,46 @@ export async function createTestOrganization(page: Page, name: string) {
  */
 export async function setup2FA(page: Page, totpCode: string) {
   await page.goto('/app/test-org/settings/security')
-  
+
   // Click enable 2FA
   await page.getByRole('button', { name: /enable 2fa/i }).click()
-  
+
   // Wait for QR code to appear
   await page.waitForSelector('img[alt="QR Code"]')
-  
+
   // Enter verification code
   await page.getByPlaceholder('000000').fill(totpCode)
   await page.getByRole('button', { name: /verify & enable/i }).click()
-  
+
   // Wait for backup codes
   await page.waitForSelector('text=/save your backup codes/i')
+}
+
+/**
+ * Helper to ensure page has loaded content and is not blank
+ * Use this after navigation to verify the page rendered correctly
+ */
+export async function verifyPageLoaded(page: Page, options?: {
+  /** Timeout in milliseconds (default: 10000) */
+  timeout?: number
+  /** Check for specific main content selector (default: 'main, [role="main"], #root > div') */
+  mainContentSelector?: string
+}) {
+  const timeout = options?.timeout || 10000
+  const mainContentSelector = options?.mainContentSelector || 'main, [role="main"], #root > div'
+
+  // Wait for page to finish loading
+  await page.waitForLoadState('networkidle', { timeout })
+
+  // Verify body is not empty
+  const bodyContent = await page.locator('body').textContent()
+  expect(bodyContent?.trim()).not.toBe('')
+
+  // Verify main content area exists and is visible
+  const mainContent = page.locator(mainContentSelector).first()
+  await expect(mainContent).toBeVisible({ timeout })
+
+  // Verify no full-page error states
+  const hasError = await page.locator('text=/error|something went wrong|500|502|503/i').count()
+  expect(hasError).toBe(0)
 }

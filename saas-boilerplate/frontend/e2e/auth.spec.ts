@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test'
+import { verifyPageLoaded } from './helpers/auth'
 
 test.describe('Authentication Flow', () => {
   test.beforeEach(async ({ page }) => {
@@ -7,6 +8,7 @@ test.describe('Authentication Flow', () => {
 
   test('should redirect to login page from root', async ({ page }) => {
     await expect(page).toHaveURL(/\/login/)
+    await verifyPageLoaded(page)
     await expect(page.getByRole('heading', { name: /sign in to your account/i })).toBeVisible()
   })
 
