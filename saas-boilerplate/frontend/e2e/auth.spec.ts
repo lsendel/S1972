@@ -14,6 +14,7 @@ test.describe('Authentication Flow', () => {
 
   test('should show validation for empty login form', async ({ page }) => {
     await page.goto('/login')
+    await verifyPageLoaded(page)
     
     // Try to submit without filling form
     await page.getByRole('button', { name: /sign in/i }).click()
@@ -25,6 +26,7 @@ test.describe('Authentication Flow', () => {
 
   test('should navigate to signup page', async ({ page }) => {
     await page.goto('/login')
+    await verifyPageLoaded(page)
     
     await page.getByRole('link', { name: /start a 14 day free trial/i }).click()
     
@@ -34,23 +36,28 @@ test.describe('Authentication Flow', () => {
 
   test('should navigate to forgot password page', async ({ page }) => {
     await page.goto('/login')
+    await verifyPageLoaded(page)
     
     await page.getByRole('link', { name: /forgot password/i }).click()
     
     await expect(page).toHaveURL(/\/forgot-password/)
+    await verifyPageLoaded(page)
     await expect(page.getByRole('heading', { name: /reset your password/i })).toBeVisible()
   })
 
   test('should navigate back to login from signup', async ({ page }) => {
     await page.goto('/signup')
+    await verifyPageLoaded(page)
     
     await page.getByRole('link', { name: /sign in/i }).click()
     
     await expect(page).toHaveURL(/\/login/)
+    await verifyPageLoaded(page)
   })
 
   test('should display error for invalid credentials', async ({ page }) => {
     await page.goto('/login')
+    await verifyPageLoaded(page)
     
     await page.getByLabel(/email address/i).fill('invalid@example.com')
     await page.getByLabel(/^password$/i).fill('wrongpassword')
@@ -63,6 +70,7 @@ test.describe('Authentication Flow', () => {
   test.describe('Signup Flow', () => {
     test('should show all required fields', async ({ page }) => {
       await page.goto('/signup')
+      await verifyPageLoaded(page)
       
       await expect(page.getByLabel(/full name/i)).toBeVisible()
       await expect(page.getByLabel(/email/i)).toBeVisible()
@@ -71,6 +79,7 @@ test.describe('Authentication Flow', () => {
 
     test('should validate password requirements', async ({ page }) => {
       await page.goto('/signup')
+      await verifyPageLoaded(page)
       
       await page.getByLabel(/full name/i).fill('Test User')
       await page.getByLabel(/email/i).fill('test@example.com')
@@ -87,6 +96,7 @@ test.describe('Authentication Flow', () => {
   test.describe('Password Reset Flow', () => {
     test('should submit forgot password form', async ({ page }) => {
       await page.goto('/forgot-password')
+      await verifyPageLoaded(page)
       
       await page.getByLabel(/email/i).fill('test@example.com')
       await page.getByRole('button', { name: /send reset link/i }).click()

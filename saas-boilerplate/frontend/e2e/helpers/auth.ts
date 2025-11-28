@@ -15,6 +15,9 @@ export async function loginAsTestUser(page: Page) {
 
   // Wait for navigation to complete
   await page.waitForURL(/\/app/, { timeout: 10000 })
+
+  // Ensure the dashboard rendered correctly (not a blank/error page)
+  await verifyPageLoaded(page)
 }
 
 /**

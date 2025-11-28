@@ -1,6 +1,8 @@
 import { test, expect } from '@playwright/test'
 import { loginAsTestUser, verifyPageLoaded } from './helpers/auth'
 
+const orgSlug = process.env.TEST_ORG_SLUG || 'test-org'
+
 test.describe('Dashboard and Organization Flow', () => {
   test.beforeEach(async ({ page }) => {
     // Login as test user before each test
@@ -9,7 +11,6 @@ test.describe('Dashboard and Organization Flow', () => {
 
   test.describe('Dashboard', () => {
     test('should display organization information', async ({ page }) => {
-      const orgSlug = process.env.TEST_ORG_SLUG || 'test-org'
       await page.goto(`/app/${orgSlug}`)
       await verifyPageLoaded(page)
 
@@ -19,7 +20,6 @@ test.describe('Dashboard and Organization Flow', () => {
     })
 
     test('should show organization switcher', async ({ page }) => {
-      const orgSlug = process.env.TEST_ORG_SLUG || 'test-org'
       await page.goto(`/app/${orgSlug}`)
 
       // Look for organization name in sidebar
@@ -30,7 +30,6 @@ test.describe('Dashboard and Organization Flow', () => {
 
   test.describe('Settings Navigation', () => {
     test('should navigate to profile settings', async ({ page }) => {
-      const orgSlug = process.env.TEST_ORG_SLUG || 'test-org'
       await page.goto(`/app/${orgSlug}`)
       await page.getByRole('link', { name: /profile/i }).click()
 
@@ -39,7 +38,6 @@ test.describe('Dashboard and Organization Flow', () => {
     })
 
     test('should navigate to security settings', async ({ page }) => {
-      const orgSlug = process.env.TEST_ORG_SLUG || 'test-org'
       await page.goto(`/app/${orgSlug}`)
       await page.getByRole('link', { name: /security/i }).click()
 
@@ -48,7 +46,6 @@ test.describe('Dashboard and Organization Flow', () => {
     })
 
     test('should navigate to team settings', async ({ page }) => {
-      const orgSlug = process.env.TEST_ORG_SLUG || 'test-org'
       await page.goto(`/app/${orgSlug}`)
       await page.getByRole('link', { name: /team/i }).click()
 
@@ -57,7 +54,6 @@ test.describe('Dashboard and Organization Flow', () => {
     })
 
     test('should navigate to billing settings', async ({ page }) => {
-      const orgSlug = process.env.TEST_ORG_SLUG || 'test-org'
       await page.goto(`/app/${orgSlug}`)
       await page.getByRole('link', { name: /billing/i }).click()
 
@@ -68,7 +64,6 @@ test.describe('Dashboard and Organization Flow', () => {
 
   test.describe('Team Management', () => {
     test('should show invite member form', async ({ page }) => {
-      const orgSlug = process.env.TEST_ORG_SLUG || 'test-org'
       await page.goto(`/app/${orgSlug}/settings/team`)
 
       await expect(page.getByLabel(/email/i)).toBeVisible()
@@ -76,7 +71,6 @@ test.describe('Dashboard and Organization Flow', () => {
     })
 
     test('should validate email for team invitation', async ({ page }) => {
-      const orgSlug = process.env.TEST_ORG_SLUG || 'test-org'
       await page.goto(`/app/${orgSlug}/settings/team`)
 
       const emailInput = page.getByLabel(/email/i).first()
