@@ -6,8 +6,8 @@ from django.db import transaction
 from django.core.cache import cache
 from apps.accounts.models import TOTPDevice, BackupCode
 from .totp_serializers import (
-    TOTPDeviceSerializer, TOTPSetupSerializer, TOTPVerifySerializer,
-    TOTPEnableSerializer, BackupCodeSerializer, BackupCodeVerifySerializer
+    TOTPDeviceSerializer, TOTPSetupSerializer, TOTPEnableSerializer,
+    BackupCodeSerializer
 )
 import qrcode
 import qrcode.image.svg
@@ -18,14 +18,21 @@ import base64
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def totp_status(request):
-    """Get the current 2FA status for the authenticated user."""
+    """Get the current 2FA status for the authenticated user.
+
+    Args:
+        request: The request object.
+
+    Returns:
+        Response: Status of 2FA, device info, and remaining backup codes.
+    """
     user = request.user
-    
+
     try:
         device = user.totp_device
         serializer = TOTPDeviceSerializer(device)
         backup_codes_count = user.backup_codes.filter(used=False).count()
-        
+
         return Response({
             'enabled': user.totp_enabled and device.confirmed,
             'device': serializer.data if device.confirmed else None,
@@ -42,16 +49,22 @@ def totp_status(request):
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def totp_setup(request):
-    """
-    Initiate TOTP setup for the user.
+    """Initiate TOTP setup for the user.
+
     Creates a new TOTP device and returns the provisioning URI and QR code.
+
+    Args:
+        request: The request object.
+
+    Returns:
+        Response: Device info, QR code, and secret.
     """
     user = request.user
     serializer = TOTPSetupSerializer(data=request.data)
-    
+
     if not serializer.is_valid():
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-    
+
     # Delete any existing unconfirmed device
     try:
         existing_device = user.totp_device
@@ -64,23 +77,23 @@ def totp_setup(request):
             )
     except TOTPDevice.DoesNotExist:
         pass
-    
+
     # Create new device
     device = TOTPDevice.create_for_user(user, name=serializer.validated_data['name'])
-    
+
     # Generate QR code
     provisioning_uri = device.get_provisioning_uri()
     qr = qrcode.QRCode(version=1, box_size=10, border=5)
     qr.add_data(provisioning_uri)
     qr.make(fit=True)
-    
+
     img = qr.make_image(fill_color="black", back_color="white")
     buffer = io.BytesIO()
     img.save(buffer, format='PNG')
     qr_code_base64 = base64.b64encode(buffer.getvalue()).decode()
-    
+
     device_serializer = TOTPDeviceSerializer(device)
-    
+
     return Response({
         'device': device_serializer.data,
         'qr_code': f'data:image/png;base64,{qr_code_base64}',
@@ -92,16 +105,22 @@ def totp_setup(request):
 @permission_classes([IsAuthenticated])
 @transaction.atomic
 def totp_enable(request):
-    """
-    Enable TOTP by verifying a token from the new device.
+    """Enable TOTP by verifying a token from the new device.
+
     Generates backup codes upon successful verification.
+
+    Args:
+        request: The request object.
+
+    Returns:
+        Response: Success message and backup codes.
     """
     user = request.user
     serializer = TOTPEnableSerializer(data=request.data)
-    
+
     if not serializer.is_valid():
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-    
+
     try:
         device = user.totp_device
     except TOTPDevice.DoesNotExist:
@@ -109,13 +128,13 @@ def totp_enable(request):
             {'error': 'No TOTP device found. Please set up 2FA first.'},
             status=status.HTTP_400_BAD_REQUEST
         )
-    
+
     if device.confirmed:
         return Response(
             {'error': '2FA is already enabled.'},
             status=status.HTTP_400_BAD_REQUEST
         )
-    
+
     # Verify the token
     token = serializer.validated_data['token']
     if not device.verify_token(token):
@@ -123,17 +142,17 @@ def totp_enable(request):
             {'error': 'Invalid verification code. Please try again.'},
             status=status.HTTP_400_BAD_REQUEST
         )
-    
+
     # Confirm the device and enable TOTP for the user
     device.confirmed = True
     device.save(update_fields=['confirmed'])
-    
+
     user.totp_enabled = True
     user.save(update_fields=['totp_enabled'])
-    
+
     # Generate backup codes
     backup_codes = BackupCode.generate_for_user(user, count=10)
-    
+
     return Response({
         'message': '2FA has been successfully enabled.',
         'backup_codes': backup_codes,
@@ -145,37 +164,43 @@ def totp_enable(request):
 @permission_classes([IsAuthenticated])
 @transaction.atomic
 def totp_disable(request):
-    """
-    Disable TOTP for the user.
+    """Disable TOTP for the user.
+
     Requires password confirmation for security.
+
+    Args:
+        request: The request object.
+
+    Returns:
+        Response: Success message.
     """
     user = request.user
     password = request.data.get('password')
-    
+
     if not password:
         return Response(
             {'error': 'Password is required to disable 2FA.'},
             status=status.HTTP_400_BAD_REQUEST
         )
-    
+
     if not user.check_password(password):
         return Response(
             {'error': 'Invalid password.'},
             status=status.HTTP_400_BAD_REQUEST
         )
-    
+
     try:
         device = user.totp_device
         device.delete()
     except TOTPDevice.DoesNotExist:
         pass
-    
+
     # Delete all backup codes
     user.backup_codes.all().delete()
-    
+
     user.totp_enabled = False
     user.save(update_fields=['totp_enabled'])
-    
+
     return Response({
         'message': '2FA has been successfully disabled.'
     }, status=status.HTTP_200_OK)
@@ -184,11 +209,18 @@ def totp_disable(request):
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def backup_codes_list(request):
-    """List backup codes (without revealing the actual codes)."""
+    """List backup codes (without revealing the actual codes).
+
+    Args:
+        request: The request object.
+
+    Returns:
+        Response: List of backup codes and stats.
+    """
     user = request.user
     codes = user.backup_codes.all().order_by('-created_at')
     serializer = BackupCodeSerializer(codes, many=True)
-    
+
     return Response({
         'codes': serializer.data,
         'total': codes.count(),
@@ -201,34 +233,40 @@ def backup_codes_list(request):
 @permission_classes([IsAuthenticated])
 @transaction.atomic
 def backup_codes_regenerate(request):
-    """
-    Regenerate backup codes.
+    """Regenerate backup codes.
+
     Requires password confirmation for security.
+
+    Args:
+        request: The request object.
+
+    Returns:
+        Response: New backup codes.
     """
     user = request.user
     password = request.data.get('password')
-    
+
     if not password:
         return Response(
             {'error': 'Password is required to regenerate backup codes.'},
             status=status.HTTP_400_BAD_REQUEST
         )
-    
+
     if not user.check_password(password):
         return Response(
             {'error': 'Invalid password.'},
             status=status.HTTP_400_BAD_REQUEST
         )
-    
+
     if not user.totp_enabled:
         return Response(
             {'error': '2FA must be enabled to regenerate backup codes.'},
             status=status.HTTP_400_BAD_REQUEST
         )
-    
+
     # Generate new backup codes
     backup_codes = BackupCode.generate_for_user(user, count=10)
-    
+
     return Response({
         'message': 'Backup codes have been regenerated.',
         'backup_codes': backup_codes,
@@ -238,22 +276,28 @@ def backup_codes_regenerate(request):
 
 @api_view(['POST'])
 def totp_verify_login(request):
-    """
-    Verify TOTP token or backup code during login.
+    """Verify TOTP token or backup code during login.
+
     Used after successful password authentication.
+
+    Args:
+        request: The request object.
+
+    Returns:
+        Response: Success message or error.
     """
     # This endpoint would typically be used in the login flow
     # For now, it's a placeholder that would need to be integrated
     # with the session-based auth flow
-    
+
     user_id = cache.get(f'2fa_pending:{request.session.session_key}')
-    
+
     if not user_id:
         return Response(
             {'error': 'No pending 2FA verification.'},
             status=status.HTTP_400_BAD_REQUEST
         )
-    
+
     from apps.accounts.models import User
     try:
         user = User.objects.get(id=user_id)
@@ -262,26 +306,26 @@ def totp_verify_login(request):
             {'error': 'User not found.'},
             status=status.HTTP_400_BAD_REQUEST
         )
-    
+
     token = request.data.get('token')
-    
+
     if not token:
         return Response(
             {'error': 'Token is required.'},
             status=status.HTTP_400_BAD_REQUEST
         )
-    
+
     # Try TOTP verification first
     try:
         device = user.totp_device
-        if device.verified and device.verify_token(token):
+        if device.confirmed and device.verify_token(token):
             # Clear the pending 2FA flag
             cache.delete(f'2fa_pending:{request.session.session_key}')
             # Complete the login (this would integrate with your auth system)
             return Response({'message': '2FA verification successful.'})
     except TOTPDevice.DoesNotExist:
         pass
-    
+
     # Try backup code verification
     for backup_code in user.backup_codes.filter(used=False):
         if backup_code.verify_code(token):
@@ -291,7 +335,7 @@ def totp_verify_login(request):
                 'message': '2FA verification successful using backup code.',
                 'backup_codes_remaining': user.backup_codes.filter(used=False).count()
             })
-    
+
     return Response(
         {'error': 'Invalid verification code or backup code.'},
         status=status.HTTP_400_BAD_REQUEST

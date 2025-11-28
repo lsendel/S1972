@@ -1,10 +1,9 @@
-"""
-Analytics service layer
+"""Analytics service layer.
 
 Business logic for tracking and aggregating analytics.
 """
-from datetime import datetime, timedelta
-from django.db.models import Count, Sum, Avg, Q
+from datetime import timedelta
+from django.db.models import Sum, Q
 from django.utils import timezone
 from django.contrib.auth import get_user_model
 from apps.organizations.models import Organization
@@ -15,21 +14,21 @@ User = get_user_model()
 
 
 class ActivityLogger:
-    """
-    Service for logging user activities.
-    """
+    """Service for logging user activities."""
 
     @staticmethod
     def log(action, user=None, description='', request=None, **metadata):
-        """
-        Log an activity.
+        """Log an activity.
 
         Args:
-            action: Action type (from ActivityLog.ACTION_TYPES)
-            user: User performing the action
-            description: Optional description
-            request: HTTP request object for IP and user agent
-            **metadata: Additional data to store
+            action: Action type (from ActivityLog.ACTION_TYPES).
+            user: User performing the action.
+            description: Optional description.
+            request: HTTP request object for IP and user agent.
+            **metadata: Additional data to store.
+
+        Returns:
+            ActivityLog: The created activity log entry.
         """
         ip_address = None
         user_agent = ''
@@ -49,7 +48,14 @@ class ActivityLogger:
 
     @staticmethod
     def _get_client_ip(request):
-        """Extract client IP from request."""
+        """Extract client IP from request.
+
+        Args:
+            request: The HTTP request.
+
+        Returns:
+            str: The client IP address.
+        """
         x_forwarded_for = request.META.get('HTTP_X_FORWARDED_FOR')
         if x_forwarded_for:
             ip = x_forwarded_for.split(',')[0]
@@ -59,17 +65,14 @@ class ActivityLogger:
 
 
 class MetricsAggregator:
-    """
-    Service for aggregating daily metrics.
-    """
+    """Service for aggregating daily metrics."""
 
     @classmethod
     def aggregate_daily_metrics(cls, date=None):
-        """
-        Aggregate all metrics for a given date.
+        """Aggregate all metrics for a given date.
 
         Args:
-            date: Date to aggregate (defaults to yesterday)
+            date: Date to aggregate (defaults to yesterday).
         """
         if date is None:
             date = timezone.now().date() - timedelta(days=1)
@@ -88,7 +91,11 @@ class MetricsAggregator:
 
     @classmethod
     def _aggregate_user_metrics(cls, date):
-        """Aggregate user-related metrics."""
+        """Aggregate user-related metrics.
+
+        Args:
+            date: The date to aggregate metrics for.
+        """
         # New users
         new_users = User.objects.filter(
             date_joined__date=date
@@ -110,7 +117,11 @@ class MetricsAggregator:
 
     @classmethod
     def _aggregate_org_metrics(cls, date):
-        """Aggregate organization-related metrics."""
+        """Aggregate organization-related metrics.
+
+        Args:
+            date: The date to aggregate metrics for.
+        """
         # New organizations
         new_orgs = Organization.objects.filter(
             created_at__date=date
@@ -131,7 +142,11 @@ class MetricsAggregator:
 
     @classmethod
     def _aggregate_subscription_metrics(cls, date):
-        """Aggregate subscription-related metrics."""
+        """Aggregate subscription-related metrics.
+
+        Args:
+            date: The date to aggregate metrics for.
+        """
         # New subscriptions
         new_subs = Subscription.objects.filter(
             created_at__date=date,
@@ -155,7 +170,11 @@ class MetricsAggregator:
 
     @classmethod
     def _aggregate_revenue_metrics(cls, date):
-        """Aggregate revenue-related metrics."""
+        """Aggregate revenue-related metrics.
+
+        Args:
+            date: The date to aggregate metrics for.
+        """
         # Get active subscriptions with their amounts
         active_subs = Subscription.objects.filter(
             Q(created_at__date__lte=date) &
@@ -186,7 +205,13 @@ class MetricsAggregator:
 
     @classmethod
     def _save_metric(cls, date, metric_type, value):
-        """Save or update a metric."""
+        """Save or update a metric.
+
+        Args:
+            date: The date of the metric.
+            metric_type: The type of metric.
+            value: The value of the metric.
+        """
         DailyMetric.objects.update_or_create(
             date=date,
             metric_type=metric_type,
@@ -195,22 +220,19 @@ class MetricsAggregator:
 
 
 class AnalyticsService:
-    """
-    Service for retrieving analytics data.
-    """
+    """Service for retrieving analytics data."""
 
     @staticmethod
     def get_dashboard_stats():
-        """
-        Get key metrics for admin dashboard.
+        """Get key metrics for admin dashboard.
 
         Returns:
-            dict: Dashboard statistics
+            dict: Dashboard statistics including users, organizations,
+                  subscriptions, and revenue.
         """
         now = timezone.now()
         today = now.date()
         week_ago = today - timedelta(days=7)
-        month_ago = today - timedelta(days=30)
 
         return {
             'users': {
@@ -237,7 +259,11 @@ class AnalyticsService:
 
     @staticmethod
     def _calculate_revenue_stats():
-        """Calculate revenue statistics."""
+        """Calculate revenue statistics.
+
+        Returns:
+            dict: MRR and ARR values.
+        """
         active_subs = Subscription.objects.filter(
             status='active'
         ).select_related('plan')
@@ -255,15 +281,14 @@ class AnalyticsService:
 
     @staticmethod
     def get_time_series_data(metric_type, days=30):
-        """
-        Get time series data for a specific metric.
+        """Get time series data for a specific metric.
 
         Args:
-            metric_type: Type of metric to retrieve
-            days: Number of days of data
+            metric_type: Type of metric to retrieve.
+            days: Number of days of data.
 
         Returns:
-            list: List of {date, value} dicts
+            list: List of {date, value} dicts.
         """
         end_date = timezone.now().date()
         start_date = end_date - timedelta(days=days)
@@ -284,13 +309,12 @@ class AnalyticsService:
 
     @staticmethod
     def get_recent_activity(limit=50):
-        """
-        Get recent activity logs.
+        """Get recent activity logs.
 
         Args:
-            limit: Maximum number of logs to return
+            limit: Maximum number of logs to return.
 
         Returns:
-            QuerySet: Recent activity logs
+            QuerySet: Recent activity logs.
         """
         return ActivityLog.objects.select_related('user').all()[:limit]

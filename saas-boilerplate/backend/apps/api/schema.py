@@ -1,16 +1,20 @@
-"""
-Schema customization hooks for drf-spectacular
+"""Schema customization hooks for drf-spectacular.
 
 These hooks allow customization of the OpenAPI schema generation.
 """
 
 
 def preprocessing_filter_schema(endpoints):
-    """
-    Filter out endpoints from the schema based on certain criteria.
+    """Filter out endpoints from the schema based on certain criteria.
 
-    For example, you might want to hide admin or internal endpoints
-    from the public API documentation.
+    For example, hiding admin or internal endpoints from the public
+    API documentation.
+
+    Args:
+        endpoints: List of (path, path_regex, method, callback) tuples.
+
+    Returns:
+        list: Filtered list of endpoints.
     """
     # Filter out Django admin URLs
     filtered = []
@@ -27,11 +31,19 @@ def preprocessing_filter_schema(endpoints):
 
 
 def postprocessing_hook(result, generator, request, public):
-    """
-    Post-process the generated schema.
+    """Post-process the generated schema.
 
-    This allows you to modify the schema after it's been generated,
-    for example to add custom extensions or modify descriptions.
+    Allows modification of the schema after generation, such as adding
+    custom extensions or modifying descriptions.
+
+    Args:
+        result: The generated schema dictionary.
+        generator: The SchemaGenerator instance.
+        request: The request object.
+        public: Boolean indicating if schema is public.
+
+    Returns:
+        dict: The modified schema.
     """
     # Add custom info
     result['info']['contact'] = {
@@ -65,11 +77,16 @@ def postprocessing_hook(result, generator, request, public):
 
 
 def custom_exception_handler(exc, context):
-    """
-    Custom exception handler for consistent error responses.
+    """Custom exception handler for consistent error responses.
+
+    Args:
+        exc: The exception raised.
+        context: Context dictionary containing view info.
+
+    Returns:
+        Response: formatted error response or None.
     """
     from rest_framework.views import exception_handler
-    from rest_framework.response import Response
 
     # Call DRF's default exception handler first
     response = exception_handler(exc, context)

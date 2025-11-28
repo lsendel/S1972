@@ -1,7 +1,16 @@
 from rest_framework.views import exception_handler
-from rest_framework.response import Response
+
 
 def custom_exception_handler(exc, context):
+    """Custom exception handler to standardize error responses.
+
+    Args:
+        exc: The exception raised.
+        context: Context dictionary containing view info.
+
+    Returns:
+        Response: Formatted error response.
+    """
     # Call REST framework's default exception handler first,
     # to get the standard error response.
     response = exception_handler(exc, context)
@@ -10,7 +19,7 @@ def custom_exception_handler(exc, context):
         # Customize the response format
         data = response.data
         errors = []
-        
+
         if isinstance(data, dict):
             for key, value in data.items():
                 if isinstance(value, list):
@@ -19,7 +28,7 @@ def custom_exception_handler(exc, context):
                 else:
                     errors.append({'code': 'ERROR', 'field': key, 'message': str(value)})
         elif isinstance(data, list):
-             for v in data:
+            for v in data:
                 errors.append({'code': 'ERROR', 'message': str(v)})
 
         response.data = {

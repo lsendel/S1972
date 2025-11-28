@@ -1,13 +1,15 @@
-"""
-Analytics admin configuration
-"""
+"""Analytics admin configuration."""
 from django.contrib import admin
 from .models import ActivityLog, DailyMetric, UserSession
 
 
 @admin.register(ActivityLog)
 class ActivityLogAdmin(admin.ModelAdmin):
-    """Admin for activity logs."""
+    """Admin configuration for activity logs.
+
+    Allows filtering, searching, and viewing of activity logs.
+    Includes request information and metadata in collapsed fieldsets.
+    """
 
     list_display = ['user', 'action', 'created_at', 'ip_address']
     list_filter = ['action', 'created_at']
@@ -35,7 +37,10 @@ class ActivityLogAdmin(admin.ModelAdmin):
 
 @admin.register(DailyMetric)
 class DailyMetricAdmin(admin.ModelAdmin):
-    """Admin for daily metrics."""
+    """Admin configuration for daily metrics.
+
+    Allows filtering and viewing of aggregated daily metrics.
+    """
 
     list_display = ['date', 'metric_type', 'value']
     list_filter = ['metric_type', 'date']
@@ -60,7 +65,10 @@ class DailyMetricAdmin(admin.ModelAdmin):
 
 @admin.register(UserSession)
 class UserSessionAdmin(admin.ModelAdmin):
-    """Admin for user sessions."""
+    """Admin configuration for user sessions.
+
+    Allows monitoring of user sessions including active status and duration.
+    """
 
     list_display = ['user', 'started_at', 'last_activity', 'is_active', 'ip_address']
     list_filter = ['is_active', 'started_at']

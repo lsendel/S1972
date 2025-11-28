@@ -1,7 +1,7 @@
 import pytest
 from django.urls import reverse
 from rest_framework import status
-from apps.organizations.models import Organization, Membership
+from apps.organizations.models import Organization
 from apps.organizations.tests.factories import OrganizationFactory, MembershipFactory
 
 @pytest.mark.django_db

@@ -1,5 +1,4 @@
-"""
-Analytics and metrics models
+"""Analytics and metrics models.
 
 Tracks various metrics and events for analytics purposes.
 """
@@ -11,8 +10,15 @@ User = get_user_model()
 
 
 class ActivityLog(BaseModel):
-    """
-    Audit trail for important user and system actions.
+    """Audit trail for important user and system actions.
+
+    Attributes:
+        user: The user who performed the action.
+        action: The type of action performed.
+        description: Additional details about the action.
+        ip_address: IP address where the action originated.
+        user_agent: User agent string of the client.
+        metadata: JSON field for storing extra context.
     """
     ACTION_TYPES = [
         # User actions
@@ -71,13 +77,19 @@ class ActivityLog(BaseModel):
         ]
 
     def __str__(self):
+        """Return string representation of the activity log."""
         user_str = self.user.email if self.user else 'System'
         return f"{user_str} - {self.get_action_display()} at {self.created_at}"
 
 
 class DailyMetric(BaseModel):
-    """
-    Daily aggregated metrics for analytics.
+    """Daily aggregated metrics for analytics.
+
+    Attributes:
+        date: The date for the metric.
+        metric_type: The type of metric being recorded.
+        value: The value of the metric.
+        metadata: JSON field for storing extra context.
     """
     METRIC_TYPES = [
         ('users.new', 'New Users'),
@@ -107,12 +119,22 @@ class DailyMetric(BaseModel):
         ]
 
     def __str__(self):
+        """Return string representation of the daily metric."""
         return f"{self.get_metric_type_display()} - {self.date}: {self.value}"
 
 
 class UserSession(BaseModel):
-    """
-    Track user sessions for analytics.
+    """Track user sessions for analytics.
+
+    Attributes:
+        user: The user associated with the session.
+        session_key: Unique identifier for the session.
+        ip_address: IP address of the session.
+        user_agent: User agent string of the client.
+        started_at: Datetime when the session started.
+        last_activity: Datetime of the last activity in the session.
+        ended_at: Datetime when the session ended.
+        is_active: Boolean indicating if the session is currently active.
     """
     user = models.ForeignKey(
         User,
@@ -135,10 +157,15 @@ class UserSession(BaseModel):
         ]
 
     def __str__(self):
+        """Return string representation of the user session."""
         return f"{self.user.email} - {self.started_at}"
 
     @property
     def duration(self):
-        """Calculate session duration."""
+        """Calculate session duration.
+
+        Returns:
+            timedelta: The duration of the session.
+        """
         end = self.ended_at or self.last_activity
         return end - self.started_at

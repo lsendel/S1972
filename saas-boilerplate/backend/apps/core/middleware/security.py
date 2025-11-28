@@ -1,13 +1,11 @@
-"""
-Security Middleware
+"""Security Middleware.
 
 Adds additional security headers to all responses.
 """
 
 
 class SecurityHeadersMiddleware:
-    """
-    Adds security headers to all HTTP responses.
+    """Adds security headers to all HTTP responses.
 
     Headers added:
     - Content-Security-Policy: Prevents XSS and data injection attacks
@@ -17,9 +15,22 @@ class SecurityHeadersMiddleware:
     """
 
     def __init__(self, get_response):
+        """Initialize the middleware.
+
+        Args:
+            get_response: The next middleware/view in the chain.
+        """
         self.get_response = get_response
 
     def __call__(self, request):
+        """Process the request and add security headers to the response.
+
+        Args:
+            request: The request object.
+
+        Returns:
+            Response: The response object with added headers.
+        """
         response = self.get_response(request)
 
         # Content Security Policy
@@ -64,16 +75,28 @@ class SecurityHeadersMiddleware:
 
 
 class RateLimitHeadersMiddleware:
-    """
-    Adds rate limit information to responses.
+    """Adds rate limit information to responses.
 
     Works with Django Ratelimit or similar packages.
     """
 
     def __init__(self, get_response):
+        """Initialize the middleware.
+
+        Args:
+            get_response: The next middleware/view in the chain.
+        """
         self.get_response = get_response
 
     def __call__(self, request):
+        """Process the request and add rate limit headers if available.
+
+        Args:
+            request: The request object.
+
+        Returns:
+            Response: The response object with potential rate limit headers.
+        """
         response = self.get_response(request)
 
         # Add rate limit headers if rate limiting is enabled
@@ -86,14 +109,25 @@ class RateLimitHeadersMiddleware:
 
 
 class SecureReferrerMiddleware:
-    """
-    Controls referrer information sent with requests.
-    """
+    """Controls referrer information sent with requests."""
 
     def __init__(self, get_response):
+        """Initialize the middleware.
+
+        Args:
+            get_response: The next middleware/view in the chain.
+        """
         self.get_response = get_response
 
     def __call__(self, request):
+        """Process the request and set the Referrer-Policy header.
+
+        Args:
+            request: The request object.
+
+        Returns:
+            Response: The response object with Referrer-Policy header.
+        """
         response = self.get_response(request)
 
         # Strict referrer policy for better privacy

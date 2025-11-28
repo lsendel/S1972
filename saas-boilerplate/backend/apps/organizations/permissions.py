@@ -1,13 +1,11 @@
-"""
-Role-based permission classes for organization access control.
-"""
+"""Role-based permission classes for organization access control."""
 from rest_framework import permissions
 from .models import Membership
 
 
 class IsOrgMember(permissions.BasePermission):
-    """
-    Permission check that user is a member of the organization.
+    """Permission check that user is a member of the organization.
+
     Organization can be identified by:
     - 'organization' in view.kwargs (lookup by slug)
     - 'organization_id' in view.kwargs
@@ -15,7 +13,15 @@ class IsOrgMember(permissions.BasePermission):
     """
 
     def has_permission(self, request, view):
-        """Check if user has access to the organization."""
+        """Check if user has access to the organization.
+
+        Args:
+            request: The request object.
+            view: The view object.
+
+        Returns:
+            bool: True if user is a member, False otherwise.
+        """
         if not request.user or not request.user.is_authenticated:
             return False
 
@@ -33,7 +39,16 @@ class IsOrgMember(permissions.BasePermission):
         ).exists()
 
     def has_object_permission(self, request, view, obj):
-        """Check if user has access to the specific object."""
+        """Check if user has access to the specific object.
+
+        Args:
+            request: The request object.
+            view: The view object.
+            obj: The object being accessed.
+
+        Returns:
+            bool: True if user is a member, False otherwise.
+        """
         if not request.user or not request.user.is_authenticated:
             return False
 
@@ -55,12 +70,18 @@ class IsOrgMember(permissions.BasePermission):
 
 
 class IsOrgAdmin(permissions.BasePermission):
-    """
-    Permission check that user is an admin or owner of the organization.
-    """
+    """Permission check that user is an admin or owner of the organization."""
 
     def has_permission(self, request, view):
-        """Check if user is admin of the organization."""
+        """Check if user is admin of the organization.
+
+        Args:
+            request: The request object.
+            view: The view object.
+
+        Returns:
+            bool: True if user is admin/owner, False otherwise.
+        """
         if not request.user or not request.user.is_authenticated:
             return False
 
@@ -78,7 +99,16 @@ class IsOrgAdmin(permissions.BasePermission):
         ).exists()
 
     def has_object_permission(self, request, view, obj):
-        """Check if user is admin of the organization."""
+        """Check if user is admin of the organization object.
+
+        Args:
+            request: The request object.
+            view: The view object.
+            obj: The object being accessed.
+
+        Returns:
+            bool: True if user is admin/owner, False otherwise.
+        """
         if not request.user or not request.user.is_authenticated:
             return False
 
@@ -100,12 +130,18 @@ class IsOrgAdmin(permissions.BasePermission):
 
 
 class IsOrgOwner(permissions.BasePermission):
-    """
-    Permission check that user is the owner of the organization.
-    """
+    """Permission check that user is the owner of the organization."""
 
     def has_permission(self, request, view):
-        """Check if user is owner of the organization."""
+        """Check if user is owner of the organization.
+
+        Args:
+            request: The request object.
+            view: The view object.
+
+        Returns:
+            bool: True if user is owner, False otherwise.
+        """
         if not request.user or not request.user.is_authenticated:
             return False
 
@@ -123,7 +159,16 @@ class IsOrgOwner(permissions.BasePermission):
         ).exists()
 
     def has_object_permission(self, request, view, obj):
-        """Check if user is owner of the organization."""
+        """Check if user is owner of the organization object.
+
+        Args:
+            request: The request object.
+            view: The view object.
+            obj: The object being accessed.
+
+        Returns:
+            bool: True if user is owner, False otherwise.
+        """
         if not request.user or not request.user.is_authenticated:
             return False
 
@@ -145,12 +190,18 @@ class IsOrgOwner(permissions.BasePermission):
 
 
 class IsOrgMemberReadOnly(permissions.BasePermission):
-    """
-    Allow members to read, but only admins to write.
-    """
+    """Allow members to read, but only admins to write."""
 
     def has_permission(self, request, view):
-        """Check permission based on request method."""
+        """Check permission based on request method.
+
+        Args:
+            request: The request object.
+            view: The view object.
+
+        Returns:
+            bool: True if permitted, False otherwise.
+        """
         if not request.user or not request.user.is_authenticated:
             return False
 
@@ -175,7 +226,16 @@ class IsOrgMemberReadOnly(permissions.BasePermission):
         ).exists()
 
     def has_object_permission(self, request, view, obj):
-        """Check object-level permission."""
+        """Check object-level permission.
+
+        Args:
+            request: The request object.
+            view: The view object.
+            obj: The object being accessed.
+
+        Returns:
+            bool: True if permitted, False otherwise.
+        """
         if not request.user or not request.user.is_authenticated:
             return False
 
@@ -205,15 +265,14 @@ class IsOrgMemberReadOnly(permissions.BasePermission):
 
 
 def get_user_role_in_org(user, organization):
-    """
-    Helper function to get user's role in an organization.
+    """Helper function to get user's role in an organization.
 
     Args:
-        user: User instance
-        organization: Organization instance or slug
+        user: User instance.
+        organization: Organization instance or slug.
 
     Returns:
-        str: Role ('owner', 'admin', 'member') or None if not a member
+        str: Role ('owner', 'admin', 'member') or None if not a member.
     """
     try:
         if isinstance(organization, str):
@@ -231,32 +290,32 @@ def get_user_role_in_org(user, organization):
 
 
 def user_can_invite_members(user, organization):
-    """
-    Check if user can invite members to the organization.
+    """Check if user can invite members to the organization.
+
     Only admins and owners can invite.
 
     Args:
-        user: User instance
-        organization: Organization instance
+        user: User instance.
+        organization: Organization instance.
 
     Returns:
-        bool: True if user can invite, False otherwise
+        bool: True if user can invite, False otherwise.
     """
     role = get_user_role_in_org(user, organization)
     return role in ['admin', 'owner']
 
 
 def user_can_manage_subscription(user, organization):
-    """
-    Check if user can manage subscription for the organization.
+    """Check if user can manage subscription for the organization.
+
     Only admins and owners can manage subscriptions.
 
     Args:
-        user: User instance
-        organization: Organization instance
+        user: User instance.
+        organization: Organization instance.
 
     Returns:
-        bool: True if user can manage subscription, False otherwise
+        bool: True if user can manage subscription, False otherwise.
     """
     role = get_user_role_in_org(user, organization)
     return role in ['admin', 'owner']

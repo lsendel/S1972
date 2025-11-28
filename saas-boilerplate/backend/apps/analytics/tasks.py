@@ -1,5 +1,4 @@
-"""
-Celery tasks for analytics
+"""Celery tasks for analytics.
 
 Automated tasks for metrics aggregation and cleanup.
 """
@@ -12,11 +11,13 @@ from .models import ActivityLog, UserSession
 
 @shared_task
 def aggregate_daily_metrics():
-    """
-    Aggregate metrics for yesterday.
+    """Aggregate metrics for yesterday.
 
     This task should run daily (e.g., at 1 AM) to aggregate
     the previous day's metrics.
+
+    Returns:
+        str: Status message.
     """
     yesterday = timezone.now().date() - timedelta(days=1)
     MetricsAggregator.aggregate_daily_metrics(yesterday)
@@ -25,11 +26,13 @@ def aggregate_daily_metrics():
 
 @shared_task
 def cleanup_old_activity_logs(days=90):
-    """
-    Clean up activity logs older than specified days.
+    """Clean up activity logs older than specified days.
 
     Args:
-        days: Number of days to retain (default: 90)
+        days: Number of days to retain (default: 90).
+
+    Returns:
+        str: Status message indicating number of deleted logs.
     """
     cutoff_date = timezone.now() - timedelta(days=days)
     deleted_count, _ = ActivityLog.objects.filter(
@@ -40,11 +43,13 @@ def cleanup_old_activity_logs(days=90):
 
 @shared_task
 def cleanup_old_sessions(days=30):
-    """
-    Clean up inactive sessions older than specified days.
+    """Clean up inactive sessions older than specified days.
 
     Args:
-        days: Number of days to retain (default: 30)
+        days: Number of days to retain (default: 30).
+
+    Returns:
+        str: Status message indicating number of deleted sessions.
     """
     cutoff_date = timezone.now() - timedelta(days=days)
     deleted_count, _ = UserSession.objects.filter(
@@ -56,11 +61,13 @@ def cleanup_old_sessions(days=30):
 
 @shared_task
 def close_inactive_sessions(hours=24):
-    """
-    Close sessions that have been inactive for specified hours.
+    """Close sessions that have been inactive for specified hours.
 
     Args:
-        hours: Hours of inactivity before closing (default: 24)
+        hours: Hours of inactivity before closing (default: 24).
+
+    Returns:
+        str: Status message indicating number of closed sessions.
     """
     cutoff_time = timezone.now() - timedelta(hours=hours)
     updated_count = UserSession.objects.filter(

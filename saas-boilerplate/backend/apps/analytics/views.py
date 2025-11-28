@@ -1,15 +1,11 @@
-"""
-Analytics API views
-"""
+"""Analytics API views."""
 from rest_framework import viewsets, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
-from rest_framework.permissions import IsAuthenticated
 from drf_spectacular.utils import extend_schema, OpenApiParameter
-from .models import ActivityLog, DailyMetric, UserSession
+from .models import ActivityLog, UserSession
 from .serializers import (
     ActivityLogSerializer,
-    DailyMetricSerializer,
     DashboardStatsSerializer,
     UserSessionSerializer,
 )
@@ -18,8 +14,7 @@ from .permissions import IsSuperUser
 
 
 class AnalyticsViewSet(viewsets.ViewSet):
-    """
-    Analytics and metrics endpoints.
+    """Analytics and metrics endpoints.
 
     Provides dashboard statistics, time series data, and activity logs.
     """
@@ -33,7 +28,14 @@ class AnalyticsViewSet(viewsets.ViewSet):
     )
     @action(detail=False, methods=['get'])
     def dashboard(self, request):
-        """Get dashboard statistics."""
+        """Get dashboard statistics.
+
+        Args:
+            request: The request object.
+
+        Returns:
+            Response: Dashboard statistics data.
+        """
         stats = AnalyticsService.get_dashboard_stats()
         serializer = DashboardStatsSerializer(stats)
         return Response(serializer.data)
@@ -61,7 +63,14 @@ class AnalyticsViewSet(viewsets.ViewSet):
     )
     @action(detail=False, methods=['get'])
     def time_series(self, request):
-        """Get time series data for a metric."""
+        """Get time series data for a metric.
+
+        Args:
+            request: The request object containing query parameters.
+
+        Returns:
+            Response: Time series data.
+        """
         metric_type = request.query_params.get('metric_type')
         days = int(request.query_params.get('days', 30))
 
@@ -81,14 +90,20 @@ class AnalyticsViewSet(viewsets.ViewSet):
     )
     @action(detail=False, methods=['post'])
     def aggregate(self, request):
-        """Manually trigger metrics aggregation."""
+        """Manually trigger metrics aggregation.
+
+        Args:
+            request: The request object.
+
+        Returns:
+            Response: Success message.
+        """
         MetricsAggregator.aggregate_daily_metrics()
         return Response({'status': 'Metrics aggregated successfully'})
 
 
 class ActivityLogViewSet(viewsets.ReadOnlyModelViewSet):
-    """
-    Activity log endpoints.
+    """Activity log endpoints.
 
     Provides access to the audit trail of user and system actions.
     """
@@ -106,6 +121,16 @@ class ActivityLogViewSet(viewsets.ReadOnlyModelViewSet):
         tags=['Analytics'],
     )
     def list(self, request, *args, **kwargs):
+        """List all activity logs.
+
+        Args:
+            request: The request object.
+            *args: Variable length argument list.
+            **kwargs: Arbitrary keyword arguments.
+
+        Returns:
+            Response: List of activity logs.
+        """
         return super().list(request, *args, **kwargs)
 
     @extend_schema(
@@ -114,12 +139,21 @@ class ActivityLogViewSet(viewsets.ReadOnlyModelViewSet):
         tags=['Analytics'],
     )
     def retrieve(self, request, *args, **kwargs):
+        """Retrieve a specific activity log.
+
+        Args:
+            request: The request object.
+            *args: Variable length argument list.
+            **kwargs: Arbitrary keyword arguments.
+
+        Returns:
+            Response: Activity log details.
+        """
         return super().retrieve(request, *args, **kwargs)
 
 
 class UserSessionViewSet(viewsets.ReadOnlyModelViewSet):
-    """
-    User session endpoints.
+    """User session endpoints.
 
     Provides information about user sessions for analytics.
     """
@@ -136,6 +170,16 @@ class UserSessionViewSet(viewsets.ReadOnlyModelViewSet):
         tags=['Analytics'],
     )
     def list(self, request, *args, **kwargs):
+        """List all user sessions.
+
+        Args:
+            request: The request object.
+            *args: Variable length argument list.
+            **kwargs: Arbitrary keyword arguments.
+
+        Returns:
+            Response: List of user sessions.
+        """
         return super().list(request, *args, **kwargs)
 
     @extend_schema(
@@ -145,7 +189,14 @@ class UserSessionViewSet(viewsets.ReadOnlyModelViewSet):
     )
     @action(detail=False, methods=['get'])
     def active(self, request):
-        """Get currently active sessions."""
+        """Get currently active sessions.
+
+        Args:
+            request: The request object.
+
+        Returns:
+            Response: List of active user sessions.
+        """
         active_sessions = self.queryset.filter(is_active=True)
         page = self.paginate_queryset(active_sessions)
         if page is not None:

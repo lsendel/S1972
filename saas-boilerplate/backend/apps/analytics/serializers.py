@@ -1,6 +1,4 @@
-"""
-Analytics serializers
-"""
+"""Analytics serializers."""
 from rest_framework import serializers
 from .models import ActivityLog, DailyMetric, UserSession
 
@@ -85,5 +83,12 @@ class UserSessionSerializer(serializers.ModelSerializer):
         read_only_fields = fields
 
     def get_duration_seconds(self, obj):
-        """Get session duration in seconds."""
+        """Get session duration in seconds.
+
+        Args:
+            obj: The UserSession instance.
+
+        Returns:
+            float: Duration in seconds.
+        """
         return obj.duration.total_seconds()

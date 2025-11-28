@@ -1,7 +1,11 @@
-
 def normalize_email(email: str) -> str:
-    """
-    Normalize the email address by lowercasing the domain part of it.
+    """Normalize the email address by lowercasing the domain part of it.
+
+    Args:
+        email: The email address to normalize.
+
+    Returns:
+        str: The normalized email address.
     """
     if not email:
         return ""

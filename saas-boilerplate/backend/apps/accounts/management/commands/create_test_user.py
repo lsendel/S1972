@@ -134,9 +134,9 @@ class Command(BaseCommand):
             if membership.role != Membership.ROLE_OWNER:
                 membership.role = Membership.ROLE_OWNER
                 membership.save()
-                self.stdout.write(self.style.WARNING(f'⚠ Updated membership role to owner'))
+                self.stdout.write(self.style.WARNING('⚠ Updated membership role to owner'))
             else:
-                self.stdout.write(self.style.WARNING(f'⚠ Membership already exists'))
+                self.stdout.write(self.style.WARNING('⚠ Membership already exists'))
 
         # Print summary
         self.stdout.write('')

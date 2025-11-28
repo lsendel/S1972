@@ -1,8 +1,5 @@
-"""
-Authentication utility functions for email verification, password reset, etc.
-"""
+"""Authentication utility functions for email verification, password reset, etc."""
 import secrets
-from datetime import timedelta
 from django.utils import timezone
 from django.core.mail import send_mail
 from django.template.loader import render_to_string
@@ -14,8 +11,13 @@ User = get_user_model()
 
 
 def get_client_ip(request):
-    """
-    Extract client IP address from request, handling proxies.
+    """Extract client IP address from request, handling proxies.
+
+    Args:
+        request: The request object.
+
+    Returns:
+        str: The client IP address.
     """
     x_forwarded_for = request.META.get('HTTP_X_FORWARDED_FOR')
     if x_forwarded_for:
@@ -26,21 +28,22 @@ def get_client_ip(request):
 
 
 def generate_token():
-    """
-    Generate a secure random token for email verification and password reset.
+    """Generate a secure random token for email verification and password reset.
+
+    Returns:
+        str: The generated token.
     """
     return secrets.token_urlsafe(32)
 
 
 def create_verification_token(user):
-    """
-    Create and store an email verification token for a user.
+    """Create and store an email verification token for a user.
 
     Args:
-        user: User instance
+        user: User instance.
 
     Returns:
-        str: Verification token
+        str: Verification token.
     """
     token = generate_token()
     cache_key = f'email_verify:{token}'
@@ -50,14 +53,13 @@ def create_verification_token(user):
 
 
 def verify_email_token(token):
-    """
-    Verify an email verification token and return the user.
+    """Verify an email verification token and return the user.
 
     Args:
-        token: Verification token
+        token: Verification token.
 
     Returns:
-        User instance if valid, None otherwise
+        User: User instance if valid, None otherwise.
     """
     cache_key = f'email_verify:{token}'
     user_id = cache.get(cache_key)
@@ -78,14 +80,13 @@ def verify_email_token(token):
 
 
 def create_password_reset_token(user):
-    """
-    Create and store a password reset token for a user.
+    """Create and store a password reset token for a user.
 
     Args:
-        user: User instance
+        user: User instance.
 
     Returns:
-        str: Reset token
+        str: Reset token.
     """
     token = generate_token()
     cache_key = f'password_reset:{token}'
@@ -95,14 +96,13 @@ def create_password_reset_token(user):
 
 
 def verify_password_reset_token(token):
-    """
-    Verify a password reset token and return the user.
+    """Verify a password reset token and return the user.
 
     Args:
-        token: Reset token
+        token: Reset token.
 
     Returns:
-        User instance if valid, None otherwise
+        User: User instance if valid, None otherwise.
     """
     cache_key = f'password_reset:{token}'
     user_id = cache.get(cache_key)
@@ -118,20 +118,21 @@ def verify_password_reset_token(token):
 
 
 def invalidate_password_reset_token(token):
-    """
-    Invalidate a password reset token after use.
+    """Invalidate a password reset token after use.
+
+    Args:
+        token: Reset token.
     """
     cache_key = f'password_reset:{token}'
     cache.delete(cache_key)
 
 
 def send_verification_email(user, request):
-    """
-    Send email verification email to user.
+    """Send email verification email to user.
 
     Args:
-        user: User instance
-        request: HTTP request for building absolute URL
+        user: User instance.
+        request: HTTP request for building absolute URL.
     """
     token = create_verification_token(user)
 
@@ -160,12 +161,11 @@ def send_verification_email(user, request):
 
 
 def send_password_reset_email(user, request):
-    """
-    Send password reset email to user.
+    """Send password reset email to user.
 
     Args:
-        user: User instance
-        request: HTTP request for building absolute URL
+        user: User instance.
+        request: HTTP request for building absolute URL.
     """
     token = create_password_reset_token(user)
 
@@ -194,15 +194,15 @@ def send_password_reset_email(user, request):
 
 
 def check_password_reset_rate_limit(email):
-    """
-    Check if password reset requests are rate limited for an email.
+    """Check if password reset requests are rate limited for an email.
+
     Limit: 3 requests per hour.
 
     Args:
-        email: Email address
+        email: Email address.
 
     Returns:
-        bool: True if rate limit exceeded, False otherwise
+        bool: True if rate limit exceeded, False otherwise.
     """
     cache_key = f'password_reset_limit:{email}'
     attempts = cache.get(cache_key, 0)
@@ -216,8 +216,8 @@ def check_password_reset_rate_limit(email):
 
 
 def invalidate_all_sessions(user):
-    """
-    Invalidate all sessions for a user (e.g., after password change).
+    """Invalidate all sessions for a user (e.g., after password change).
+
     This is a placeholder - actual implementation depends on session backend.
 
     For Redis session backend, you would need to:
@@ -226,6 +226,9 @@ def invalidate_all_sessions(user):
     3. Delete them
 
     For now, we'll rely on Django's session framework update.
+
+    Args:
+        user: User instance.
     """
     # Update password_changed_at timestamp to invalidate sessions
     user.updated_at = timezone.now()

@@ -1,35 +1,37 @@
-"""
-Team invitation utilities and email sending.
-"""
+"""Team invitation utilities and email sending."""
 import secrets
 from datetime import timedelta
 from django.utils import timezone
 from django.core.mail import send_mail
 from django.template.loader import render_to_string
 from django.conf import settings
-from .models import Invitation, Organization, Membership
+from .models import Invitation, Membership
 from django.contrib.auth import get_user_model
 
 User = get_user_model()
 
 
 def generate_invitation_token():
-    """Generate a secure invitation token."""
+    """Generate a secure invitation token.
+
+    Returns:
+        str: A URL-safe random string.
+    """
     return secrets.token_urlsafe(32)
 
 
 def create_invitation(organization, email, role, invited_by):
-    """
-    Create an invitation for a user to join an organization.
+    """Create an invitation for a user to join an organization.
 
     Args:
-        organization: Organization instance
-        email: Email address to invite
-        role: Role to assign ('admin' or 'member')
-        invited_by: User who is sending the invitation
+        organization: Organization instance.
+        email: Email address to invite.
+        role: Role to assign ('admin' or 'member').
+        invited_by: User who is sending the invitation.
 
     Returns:
-        Invitation instance or None if user is already a member
+        Invitation: The created or updated invitation instance.
+        None: If the user is already a member.
     """
     # Check if user is already a member
     user = User.objects.filter(email=email).first()
@@ -71,12 +73,11 @@ def create_invitation(organization, email, role, invited_by):
 
 
 def send_invitation_email(invitation, request):
-    """
-    Send invitation email to the invitee.
+    """Send invitation email to the invitee.
 
     Args:
-        invitation: Invitation instance
-        request: HTTP request for building absolute URLs
+        invitation: Invitation instance.
+        request: HTTP request for building absolute URLs.
     """
     # Build invitation URL
     invitation_url = request.build_absolute_uri(
@@ -105,15 +106,14 @@ def send_invitation_email(invitation, request):
 
 
 def accept_invitation(token, user):
-    """
-    Accept an invitation and create membership.
+    """Accept an invitation and create membership.
 
     Args:
-        token: Invitation token
-        user: User accepting the invitation
+        token: Invitation token.
+        user: User accepting the invitation.
 
     Returns:
-        Tuple of (membership, error_message)
+        tuple: (Membership, error_message) or (None, error_message).
     """
     try:
         invitation = Invitation.objects.get(
@@ -165,7 +165,14 @@ def accept_invitation(token, user):
 
 
 def revoke_invitation(invitation):
-    """Revoke a pending invitation."""
+    """Revoke a pending invitation.
+
+    Args:
+        invitation: Invitation instance.
+
+    Returns:
+        bool: True if revoked, False otherwise.
+    """
     if invitation.status == 'pending':
         invitation.status = 'revoked'
         invitation.save()

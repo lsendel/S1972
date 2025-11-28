@@ -7,15 +7,24 @@ import logging
 
 logger = logging.getLogger(__name__)
 
+
 @shared_task
 def send_email_task(subject, recipient_list, template_name, context):
-    """
-    Async task to send HTML emails.
+    """Async task to send HTML emails.
+
+    Args:
+        subject: Email subject.
+        recipient_list: List of recipient email addresses.
+        template_name: Path to the email template.
+        context: Context dictionary for the template.
+
+    Raises:
+        Exception: If email sending fails.
     """
     try:
         html_message = render_to_string(template_name, context)
         plain_message = strip_tags(html_message)
-        
+
         send_mail(
             subject=subject,
             message=plain_message,
@@ -29,6 +38,8 @@ def send_email_task(subject, recipient_list, template_name, context):
         logger.error(f"Failed to send email '{subject}' to {recipient_list}: {e}")
         raise e
 
+
 @shared_task
 def debug_periodic_task():
+    """Debug task to verify periodic task execution."""
     logger.info("Periodic task executed successfully.")
