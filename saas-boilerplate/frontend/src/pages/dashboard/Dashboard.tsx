@@ -2,12 +2,17 @@ import React from "react"
 import { useParams } from "react-router-dom"
 import { useOrganization, useOrganizations } from "@/hooks/useOrganization"
 import { useAuth } from "@/hooks/useAuth"
+import { DashboardSkeleton } from "@/components/LoadingSkeletons"
 
 export default function Dashboard() {
   const { orgSlug } = useParams()
-  const { data: organization } = useOrganization(orgSlug)
-  const { data: organizations } = useOrganizations()
+  const { data: organization, isLoading: orgLoading } = useOrganization(orgSlug)
+  const { data: organizations, isLoading: orgsLoading } = useOrganizations()
   const { user } = useAuth()
+
+  if (orgLoading || orgsLoading) {
+    return <DashboardSkeleton />
+  }
 
   return (
     <div className="space-y-6">

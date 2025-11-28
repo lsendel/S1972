@@ -13,14 +13,25 @@ import SecuritySettings from './pages/settings/Security';
 import TeamSettings from './pages/settings/Team';
 import BillingSettings from './pages/settings/Billing';
 import AppLayout from './components/layout/AppLayout';
+import ErrorBoundary from './components/ErrorBoundary';
+import RouteErrorBoundary from './components/RouteErrorBoundary';
+import { PageLoadingSkeleton } from './components/LoadingSkeletons';
 import { useAuth } from './hooks/useAuth';
 
-const queryClient = new QueryClient();
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      retry: 1,
+      refetchOnWindowFocus: false,
+      staleTime: 5 * 60 * 1000, // 5 minutes
+    },
+  },
+});
 
 function RequireAuth({ children }: { children: React.ReactNode }) {
   const { user, isLoading } = useAuth();
 
-  if (isLoading) return <div>Loading...</div>;
+  if (isLoading) return <PageLoadingSkeleton />;
   if (!user) return <Navigate to="/login" replace />;
 
   return <>{children}</>;
@@ -28,42 +39,55 @@ function RequireAuth({ children }: { children: React.ReactNode }) {
 
 function App() {
   return (
-    <QueryClientProvider client={queryClient}>
-      <Router>
-        <Routes>
-          {/* Public Routes */}
-          <Route path="/login" element={<Login />} />
-          <Route path="/signup" element={<Signup />} />
-          <Route path="/forgot-password" element={<ForgotPassword />} />
-          <Route path="/reset-password/:token" element={<ResetPassword />} />
-          <Route path="/verify-email/:token" element={<VerifyEmail />} />
+    <ErrorBoundary>
+      <QueryClientProvider client={queryClient}>
+        <Router>
+          <Routes>
+            {/* Public Routes */}
+            <Route path="/login" element={<Login />} errorElement={<RouteErrorBoundary />} />
+            <Route path="/signup" element={<Signup />} errorElement={<RouteErrorBoundary />} />
+            <Route path="/forgot-password" element={<ForgotPassword />} errorElement={<RouteErrorBoundary />} />
+            <Route path="/reset-password/:token" element={<ResetPassword />} errorElement={<RouteErrorBoundary />} />
+            <Route path="/verify-email/:token" element={<VerifyEmail />} errorElement={<RouteErrorBoundary />} />
 
-          {/* Onboarding */}
-          <Route path="/onboarding" element={
-            <RequireAuth>
-              <CreateOrganization />
-            </RequireAuth>
-          } />
+            {/* Onboarding */}
+            <Route
+              path="/onboarding"
+              element={
+                <RequireAuth>
+                  <CreateOrganization />
+                </RequireAuth>
+              }
+              errorElement={<RouteErrorBoundary />}
+            />
 
-          {/* Organization Routes with AppLayout */}
-          <Route path="/app/:orgSlug" element={
-            <RequireAuth>
-              <AppLayout />
-            </RequireAuth>
-          }>
-            <Route index element={<Dashboard />} />
-            <Route path="settings/profile" element={<ProfileSettings />} />
-            <Route path="settings/security" element={<SecuritySettings />} />
-            <Route path="settings/team" element={<TeamSettings />} />
-            <Route path="settings/billing" element={<BillingSettings />} />
-          </Route>
+            {/* Organization Routes with AppLayout */}
+            <Route
+              path="/app/:orgSlug"
+              element={
+                <RequireAuth>
+                  <AppLayout />
+                </RequireAuth>
+              }
+              errorElement={<RouteErrorBoundary />}
+            >
+              <Route index element={<Dashboard />} />
+              <Route path="settings/profile" element={<ProfileSettings />} />
+              <Route path="settings/security" element={<SecuritySettings />} />
+              <Route path="settings/team" element={<TeamSettings />} />
+              <Route path="settings/billing" element={<BillingSettings />} />
+            </Route>
 
-          {/* Redirects */}
-          <Route path="/" element={<Navigate to="/login" />} />
-          <Route path="/app" element={<Navigate to="/onboarding" />} />
-        </Routes>
-      </Router>
-    </QueryClientProvider>
+            {/* Redirects */}
+            <Route path="/" element={<Navigate to="/login" />} />
+            <Route path="/app" element={<Navigate to="/onboarding" />} />
+
+            {/* 404 Catch-all */}
+            <Route path="*" element={<RouteErrorBoundary />} />
+          </Routes>
+        </Router>
+      </QueryClientProvider>
+    </ErrorBoundary>
   );
 }
 

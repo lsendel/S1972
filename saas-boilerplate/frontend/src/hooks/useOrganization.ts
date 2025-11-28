@@ -1,69 +1,33 @@
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { organizationsApi, Organization, CreateOrganizationData } from '../api/organizations';
+import { useQuery } from '@tanstack/react-query';
+import client from '../api/client';
+
+export interface Organization {
+  id: string;
+  name: string;
+  slug: string;
+  logo_url: string | null;
+  role: 'owner' | 'admin' | 'member';
+  member_count: number;
+}
 
 export function useOrganizations() {
   return useQuery({
     queryKey: ['organizations'],
-    queryFn: organizationsApi.list,
+    queryFn: async () => {
+      const response = await client.get<Organization[]>('/organizations/');
+      return response.data;
+    },
   });
 }
 
-export function useOrganization(slug: string | undefined) {
+export function useOrganization(slug?: string) {
   return useQuery({
     queryKey: ['organizations', slug],
-    queryFn: () => organizationsApi.get(slug!),
+    queryFn: async () => {
+      if (!slug) return null;
+      const response = await client.get<Organization>(`/organizations/${slug}/`);
+      return response.data;
+    },
     enabled: !!slug,
-  });
-}
-
-export function useCreateOrganization() {
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: (data: CreateOrganizationData) => organizationsApi.create(data),
-    onSuccess: (newOrg) => {
-      // Update the organizations list cache
-      queryClient.setQueryData<Organization[]>(
-        ['organizations'],
-        (old = []) => [...old, newOrg]
-      );
-    },
-  });
-}
-
-export function useUpdateOrganization(slug: string) {
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: (data: Partial<CreateOrganizationData>) =>
-      organizationsApi.update(slug, data),
-    onSuccess: (updated) => {
-      // Update the specific organization cache
-      queryClient.setQueryData(['organizations', slug], updated);
-
-      // Update the organizations list cache
-      queryClient.setQueryData<Organization[]>(
-        ['organizations'],
-        (old = []) => old.map(org => org.slug === slug ? updated : org)
-      );
-    },
-  });
-}
-
-export function useDeleteOrganization() {
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: (slug: string) => organizationsApi.delete(slug),
-    onSuccess: (_, slug) => {
-      // Remove from organizations list
-      queryClient.setQueryData<Organization[]>(
-        ['organizations'],
-        (old = []) => old.filter(org => org.slug !== slug)
-      );
-
-      // Invalidate specific organization query
-      queryClient.removeQueries({ queryKey: ['organizations', slug] });
-    },
   });
 }

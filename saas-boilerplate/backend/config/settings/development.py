@@ -17,3 +17,5 @@ INTERNAL_IPS = [
 
 # Email backend for development (Mailpit)
 EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+
+FRONTEND_URL = "http://localhost:5173"
