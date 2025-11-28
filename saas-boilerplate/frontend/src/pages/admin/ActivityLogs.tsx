@@ -1,19 +1,8 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import client from '@/api/client';
+import { api } from '@/api/config';
 import { TableSkeleton } from '@/components/LoadingSkeletons';
-
-interface ActivityLog {
-  id: string;
-  user_email: string;
-  user_name: string;
-  action: string;
-  action_display: string;
-  description: string;
-  ip_address: string;
-  created_at: string;
-  metadata: Record<string, any>;
-}
+import { ActivityLog } from '@/api/generated';
 
 export default function ActivityLogs() {
   const [page, setPage] = useState(1);
@@ -22,12 +11,11 @@ export default function ActivityLogs() {
   const { data, isLoading } = useQuery({
     queryKey: ['admin', 'activity-logs', page, selectedAction],
     queryFn: async () => {
-      const params: any = { page };
-      if (selectedAction) {
-        params.action = selectedAction;
-      }
-      const response = await client.get('/api/v1/admin/activity-logs/', { params });
-      return response.data;
+      const response = await api.analytics.adminActivityLogsList({
+        page,
+        action: selectedAction as any, // Cast to any because generated type might be strict enum
+      });
+      return response;
     },
   });
 
@@ -58,10 +46,11 @@ export default function ActivityLogs() {
       <div className="bg-white rounded-lg shadow mb-6 p-4">
         <div className="flex items-center space-x-4">
           <div className="flex-1">
-            <label className="block text-sm font-medium text-gray-700 mb-2">
+            <label htmlFor="action-filter" className="block text-sm font-medium text-gray-700 mb-2">
               Filter by Action
             </label>
             <select
+              id="action-filter"
               value={selectedAction}
               onChange={(e) => setSelectedAction(e.target.value)}
               className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500"

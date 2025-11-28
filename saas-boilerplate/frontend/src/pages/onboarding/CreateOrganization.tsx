@@ -4,14 +4,20 @@ import { useNavigate } from "react-router-dom"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { useCreateOrganization } from "@/hooks/useOrganization"
+import { MetaTags } from "@/components/SEO/MetaTags"
+import { AnalyticsOrg } from "@/lib/analytics/events"
+import type { ApiError } from "@/api/generated"
+
+interface FormData {
+  name: string
+  slug: string
+}
 
 export default function CreateOrganization() {
   const navigate = useNavigate()
-  const { register, handleSubmit, watch, setValue, formState: { errors } } = useForm()
+  const { register, handleSubmit, setValue, formState: { errors } } = useForm<FormData>()
   const createOrganization = useCreateOrganization()
   const [error, setError] = useState<string | null>(null)
-
-  const name = watch("name")
 
   // Auto-generate slug from name
   const handleNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -23,19 +29,36 @@ export default function CreateOrganization() {
     setValue("slug", slug)
   }
 
-  const onSubmit = async (data: any) => {
+  const onSubmit = async (data: FormData) => {
     try {
       setError(null)
       const org = await createOrganization.mutateAsync(data)
+
+      // Track organization creation
+      AnalyticsOrg.created(org.id, org.name)
+
       // Redirect to the new organization's dashboard
       navigate(`/app/${org.slug}`)
-    } catch (err: any) {
-      setError(err?.error || err?.message || "Failed to create organization")
+    } catch (err) {
+      const apiError = err as ApiError
+      const body = apiError.body as { slug?: string[], name?: string[], error?: string }
+      // Handle error messages from backend
+      const errorMessage = body?.slug?.[0] ??
+        body?.name?.[0] ??
+        body?.error ??
+        "Failed to create organization"
+      setError(errorMessage)
     }
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-gray-50 px-4 py-12">
+    <>
+      <MetaTags
+        title="Create Organization"
+        description="Set up your organization workspace and start collaborating with your team"
+        noindex={true}
+      />
+      <div className="flex min-h-screen items-center justify-center bg-gray-50 px-4 py-12">
       <div className="w-full max-w-md space-y-8">
         <div className="text-center">
           <h2 className="text-3xl font-bold tracking-tight text-gray-900">
@@ -53,7 +76,7 @@ export default function CreateOrganization() {
             </div>
           )}
 
-          <form className="space-y-6" onSubmit={handleSubmit(onSubmit)}>
+          <form className="space-y-6" onSubmit={(e) => void handleSubmit(onSubmit)(e)}>
             <div>
               <label htmlFor="name" className="block text-sm font-medium text-gray-700">
                 Organization Name *
@@ -72,7 +95,7 @@ export default function CreateOrganization() {
                 className="mt-1"
               />
               {errors.name && (
-                <p className="mt-1 text-sm text-red-600">{errors.name.message as string}</p>
+                <p className="mt-1 text-sm text-red-600">{errors.name.message!}</p>
               )}
             </div>
 
@@ -98,7 +121,7 @@ export default function CreateOrganization() {
                 />
               </div>
               {errors.slug && (
-                <p className="mt-1 text-sm text-red-600">{errors.slug.message as string}</p>
+                <p className="mt-1 text-sm text-red-600">{errors.slug.message!}</p>
               )}
               <p className="mt-1 text-sm text-gray-500">
                 This will be used in your organization's URL
@@ -130,5 +153,6 @@ export default function CreateOrganization() {
         </div>
       </div>
     </div>
+    </>
   )
 }

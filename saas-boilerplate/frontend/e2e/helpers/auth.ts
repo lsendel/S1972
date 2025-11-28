@@ -9,15 +9,29 @@ export async function loginAsTestUser(page: Page) {
   const password = process.env.TEST_USER_PASSWORD || 'testpassword123'
 
   await page.goto('/login')
+
+  // Wait for login page to load
+  await verifyPageLoaded(page)
+
+  // Fill in credentials
   await page.getByLabel(/^email$/i).fill(email)
   await page.getByLabel(/^password$/i).fill(password)
-  await page.getByRole('button', { name: /sign in/i }).click()
 
-  // Wait for navigation to complete (expects /app/{orgSlug} pattern)
-  await page.waitForURL(/\/app\//, { timeout: 10000 })
+  // Submit form and wait for navigation
+  await Promise.all([
+    // Wait for either /app/ (if user has org) or /onboarding (if no org)
+    page.waitForURL(/\/(app\/|onboarding)/, { timeout: 15000 }),
+    page.getByRole('button', { name: /sign in/i }).click()
+  ])
 
-  // Ensure the dashboard rendered correctly (not a blank/error page)
+  // Wait for page to fully load
   await verifyPageLoaded(page)
+
+  // If we landed on onboarding, we need to create an organization
+  if (page.url().includes('/onboarding')) {
+    await createTestOrganization(page, 'E2E Test Organization')
+    await verifyPageLoaded(page)
+  }
 }
 
 /**

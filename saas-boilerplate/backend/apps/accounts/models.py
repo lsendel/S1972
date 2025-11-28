@@ -7,6 +7,7 @@ import uuid
 import secrets
 import pyotp
 from .managers import UserManager
+from apps.core.fields import EncryptedCharField
 
 class User(AbstractBaseUser, PermissionsMixin):
     """
@@ -39,6 +40,12 @@ class User(AbstractBaseUser, PermissionsMixin):
     class Meta:
         verbose_name = _('user')
         verbose_name_plural = _('users')
+        indexes = [
+            models.Index(fields=['email_verified']),
+            models.Index(fields=['is_active']),
+            models.Index(fields=['totp_enabled']),
+            models.Index(fields=['date_joined']),
+        ]
 
     def __str__(self):
         return self.email
@@ -53,11 +60,14 @@ class User(AbstractBaseUser, PermissionsMixin):
 class TOTPDevice(models.Model):
     """
     TOTP device for two-factor authentication.
-    Stores the secret key and device metadata.
+    Stores the secret key (encrypted at rest) and device metadata.
+
+    Security: The TOTP secret is encrypted using Fernet (AES-128) to prevent
+    compromise if the database is breached.
     """
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='totp_device')
-    secret = models.CharField(max_length=32, help_text=_('Base32 encoded secret'))
+    secret = EncryptedCharField(max_length=255, help_text=_('Encrypted base32 encoded TOTP secret'))
     name = models.CharField(max_length=64, default='Default', help_text=_('Device name'))
     confirmed = models.BooleanField(default=False, help_text=_('Whether the device has been confirmed'))
     created_at = models.DateTimeField(auto_now_add=True)

@@ -1,0 +1,155 @@
+name: Pre-commit Checks
+
+on:
+  pull_request:
+    paths:
+      - '**/*.py'
+      - '**/*.ts'
+      - '**/*.tsx'
+      - '**/*.js'
+      - '**/*.jsx'
+      - '.github/workflows/pre-commit.yml'
+
+env:
+  CI: true
+
+permissions:
+  contents: read
+
+jobs:
+  backend-quick-checks:
+    name: Backend Quick Checks
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: 'pip'
+          cache-dependency-path: backend/pyproject.toml
+
+      - name: Install linting dependencies only
+        working-directory: ./backend
+        run: |
+          pip install ruff mypy
+
+      - name: Run Ruff linter (fast)
+        working-directory: ./backend
+        run: |
+          echo "🔍 Running Ruff linter..."
+          ruff check . --output-format=github
+        continue-on-error: false
+
+      - name: Run Ruff formatter check (fast)
+        working-directory: ./backend
+        run: |
+          echo "🎨 Checking code formatting..."
+          ruff format --check .
+        continue-on-error: false
+
+      - name: Quick type check on modified files
+        working-directory: ./backend
+        run: |
+          echo "🔍 Running quick type check..."
+          # Only check apps and config, not migrations or tests
+          mypy apps config --no-incremental --cache-dir=/dev/null
+        continue-on-error: true  # Don't fail on type errors yet
+
+  frontend-quick-checks:
+    name: Frontend Quick Checks
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install dependencies (with cache)
+        working-directory: ./frontend
+        run: npm ci --prefer-offline --no-audit
+
+      - name: Run ESLint (fast)
+        working-directory: ./frontend
+        run: |
+          echo "🔍 Running ESLint..."
+          npm run lint -- --max-warnings 0
+
+      - name: Check TypeScript types (fast)
+        working-directory: ./frontend
+        run: |
+          echo "🔍 Checking TypeScript types..."
+          npx tsc --noEmit
+
+  security-quick-scan:
+    name: Quick Security Scan
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check for secrets in code
+        uses: trufflesecurity/trufflehog@main
+        with:
+          path: ./
+          base: ${{ github.event.repository.default_branch }}
+          head: HEAD
+          extra_args: --only-verified
+
+      - name: Check for common security issues
+        run: |
+          echo "🔒 Checking for common security issues..."
+
+          # Check for hardcoded secrets patterns
+          if grep -r -i -E "(password|secret|api_key|token)\s*=\s*['\"][^'\"]+['\"]" --include="*.py" --include="*.ts" --include="*.tsx" --exclude-dir=node_modules --exclude-dir=.venv backend/ frontend/ 2>/dev/null; then
+            echo "❌ Potential hardcoded secrets found!"
+            exit 1
+          fi
+
+          # Check for debug=True in Python
+          if grep -r "DEBUG\s*=\s*True" --include="*.py" backend/config/settings/production.py 2>/dev/null; then
+            echo "❌ DEBUG=True found in production settings!"
+            exit 1
+          fi
+
+          # Check for console.log in production code (excluding tests)
+          if grep -r "console\.log" --include="*.ts" --include="*.tsx" --exclude-dir=__tests__ --exclude="*.test.ts" --exclude="*.test.tsx" frontend/src/ 2>/dev/null; then
+            echo "⚠️  Warning: console.log found in production code"
+            # Don't fail, just warn
+          fi
+
+          echo "✅ No obvious security issues found"
+
+  summary:
+    name: Pre-commit Summary
+    runs-on: ubuntu-latest
+    timeout-minutes: 1
+    needs: [backend-quick-checks, frontend-quick-checks, security-quick-scan]
+    permissions:
+      contents: read
+
+    steps:
+      - name: All checks passed
+        run: |
+          echo "✅ All pre-commit checks passed!"
+          echo "✅ Backend linting and formatting: OK"
+          echo "✅ Frontend linting and type checking: OK"
+          echo "✅ Security quick scan: OK"
+          echo ""
+          echo "💡 Full test suite will run in separate CI jobs"

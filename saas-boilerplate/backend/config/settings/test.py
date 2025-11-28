@@ -42,3 +42,6 @@ SENTRY_DSN = None
 
 # Frontend URL for tests
 FRONTEND_URL = "http://localhost:5173"
+
+# Encryption key for tests
+FIELD_ENCRYPTION_KEY = 'VlxeRplHGOCApdZsfhfjKtpDkA6CrBdgnO3MPC7rDfk='

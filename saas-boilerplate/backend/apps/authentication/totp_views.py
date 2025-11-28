@@ -5,9 +5,11 @@ from rest_framework.response import Response
 from django.db import transaction
 from django.core.cache import cache
 from apps.accounts.models import TOTPDevice, BackupCode
+from drf_spectacular.utils import extend_schema
 from .totp_serializers import (
     TOTPDeviceSerializer, TOTPSetupSerializer, TOTPVerifySerializer,
-    TOTPEnableSerializer, BackupCodeSerializer, BackupCodeVerifySerializer
+    TOTPEnableSerializer, BackupCodeSerializer, BackupCodeVerifySerializer,
+    PasswordConfirmationSerializer
 )
 import qrcode
 import qrcode.image.svg
@@ -15,6 +17,7 @@ import io
 import base64
 
 
+@extend_schema(responses=TOTPDeviceSerializer)
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def totp_status(request):
@@ -39,6 +42,7 @@ def totp_status(request):
         })
 
 
+@extend_schema(request=TOTPSetupSerializer, responses=TOTPDeviceSerializer)
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def totp_setup(request):
@@ -88,6 +92,7 @@ def totp_setup(request):
     }, status=status.HTTP_201_CREATED)
 
 
+@extend_schema(request=TOTPEnableSerializer)
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 @transaction.atomic
@@ -141,6 +146,7 @@ def totp_enable(request):
     }, status=status.HTTP_200_OK)
 
 
+@extend_schema(request=PasswordConfirmationSerializer)
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 @transaction.atomic
@@ -181,6 +187,7 @@ def totp_disable(request):
     }, status=status.HTTP_200_OK)
 
 
+@extend_schema(responses=BackupCodeSerializer(many=True))
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def backup_codes_list(request):
@@ -197,6 +204,7 @@ def backup_codes_list(request):
     })
 
 
+@extend_schema(request=PasswordConfirmationSerializer)
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 @transaction.atomic

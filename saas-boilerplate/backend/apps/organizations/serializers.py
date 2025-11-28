@@ -5,11 +5,18 @@ from apps.accounts.serializers import UserSerializer
 class OrganizationSerializer(serializers.ModelSerializer):
     role = serializers.SerializerMethodField()
     member_count = serializers.SerializerMethodField()
+    slug = serializers.SlugField(required=False, allow_blank=True)
 
     class Meta:
         model = Organization
         fields = ('id', 'name', 'slug', 'logo_url', 'role', 'member_count', 'created_at')
-        read_only_fields = ('id', 'slug', 'role', 'member_count', 'created_at')
+        read_only_fields = ('id', 'role', 'member_count', 'created_at')
+
+    def validate_slug(self, value):
+        """Validate that slug is unique if provided."""
+        if value and Organization.objects.filter(slug=value).exists():
+            raise serializers.ValidationError("This slug is already taken.")
+        return value
 
     def get_role(self, obj):
         # This requires the view to annotate the queryset or pass context

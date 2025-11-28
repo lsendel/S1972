@@ -39,3 +39,28 @@ class OAuthProviderSerializer(serializers.Serializer):
     name = serializers.CharField()
     connected = serializers.BooleanField()
     authorization_url = serializers.URLField(required=False)
+
+
+class OAuthAuthorizationUrlSerializer(serializers.Serializer):
+    """Serializer for OAuth authorization URL response."""
+    authorization_url = serializers.URLField()
+    callback_url = serializers.URLField()
+
+
+class OAuthCallbackSerializer(serializers.Serializer):
+    """Serializer for OAuth callback response."""
+    message = serializers.CharField()
+    provider = serializers.CharField()
+    code = serializers.CharField()
+    note = serializers.CharField()
+
+
+class OAuthProviderListSerializer(serializers.Serializer):
+    """Serializer for a list of OAuth providers."""
+    providers = OAuthProviderSerializer(many=True)
+
+
+class SocialAccountListSerializer(serializers.Serializer):
+    """Serializer for a list of connected social accounts."""
+    accounts = SocialAccountSerializer(many=True)
+    total = serializers.IntegerField()

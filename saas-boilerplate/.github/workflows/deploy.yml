@@ -1,0 +1,426 @@
+name: Deploy
+
+on:
+  push:
+    branches:
+      - main
+      - develop
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Environment to deploy to'
+        required: true
+        type: choice
+        options:
+          - staging
+          - production
+      skip_tests:
+        description: 'Skip tests (use with caution)'
+        required: false
+        type: boolean
+        default: false
+
+env:
+  CI: true
+  REGISTRY: ghcr.io
+
+permissions:
+  contents: read
+
+jobs:
+  # Determine target environment based on branch or manual input
+  setup:
+    name: Setup Deployment
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+
+    outputs:
+      environment: ${{ steps.determine-env.outputs.environment }}
+      should-deploy: ${{ steps.determine-env.outputs.should-deploy }}
+
+    steps:
+      - name: Determine environment
+        id: determine-env
+        run: |
+          if [ "${{ github.event_name }}" == "workflow_dispatch" ]; then
+            echo "environment=${{ inputs.environment }}" >> $GITHUB_OUTPUT
+            echo "should-deploy=true" >> $GITHUB_OUTPUT
+          elif [ "${{ github.ref }}" == "refs/heads/main" ]; then
+            echo "environment=production" >> $GITHUB_OUTPUT
+            echo "should-deploy=true" >> $GITHUB_OUTPUT
+          elif [ "${{ github.ref }}" == "refs/heads/develop" ]; then
+            echo "environment=staging" >> $GITHUB_OUTPUT
+            echo "should-deploy=true" >> $GITHUB_OUTPUT
+          else
+            echo "should-deploy=false" >> $GITHUB_OUTPUT
+          fi
+
+  # Run tests before deployment (unless skipped)
+  pre-deployment-tests:
+    name: Pre-Deployment Tests
+    needs: setup
+    if: needs.setup.outputs.should-deploy == 'true' && !inputs.skip_tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: test_db
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+
+      redis:
+        image: redis:8-alpine
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 6379:6379
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: 'pip'
+
+      - name: Install dependencies
+        working-directory: ./backend
+        run: |
+          pip install -e .
+          pip install -e .[dev]
+
+      - name: Run backend tests
+        working-directory: ./backend
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/test_db
+          REDIS_URL: redis://localhost:6379/0
+          DJANGO_SETTINGS_MODULE: config.settings.development
+          DJANGO_SECRET_KEY: test-secret-key-for-ci
+        run: pytest --tb=short -v
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install frontend dependencies
+        working-directory: ./frontend
+        run: npm ci
+
+      - name: Run frontend tests
+        working-directory: ./frontend
+        run: npm test -- --run
+
+  # Build and push container images
+  build-and-push:
+    name: Build & Push Images
+    needs: [setup, pre-deployment-tests]
+    if: needs.setup.outputs.should-deploy == 'true' && (success() || inputs.skip_tests)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+      packages: write
+      id-token: write
+
+    outputs:
+      backend-image: ${{ steps.backend-meta.outputs.tags }}
+      frontend-image: ${{ steps.frontend-meta.outputs.tags }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract backend metadata
+        id: backend-meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ github.repository }}/backend
+          tags: |
+            type=ref,event=branch
+            type=sha,prefix=${{ needs.setup.outputs.environment }}-
+            type=raw,value=${{ needs.setup.outputs.environment }}-latest
+
+      - name: Build and push backend image
+        uses: docker/build-push-action@v5
+        with:
+          context: ./backend
+          file: ./backend/Dockerfile
+          push: true
+          tags: ${{ steps.backend-meta.outputs.tags }}
+          labels: ${{ steps.backend-meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Extract frontend metadata
+        id: frontend-meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ github.repository }}/frontend
+          tags: |
+            type=ref,event=branch
+            type=sha,prefix=${{ needs.setup.outputs.environment }}-
+            type=raw,value=${{ needs.setup.outputs.environment }}-latest
+
+      - name: Build and push frontend image
+        uses: docker/build-push-action@v5
+        with:
+          context: ./frontend
+          file: ./frontend/Dockerfile
+          push: true
+          tags: ${{ steps.frontend-meta.outputs.tags }}
+          labels: ${{ steps.frontend-meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          build-args: |
+            VITE_API_URL=${{ needs.setup.outputs.environment == 'production' && 'https://api.example.com' || 'https://api-staging.example.com' }}
+
+  # Deploy to staging environment
+  deploy-staging:
+    name: Deploy to Staging
+    needs: [setup, build-and-push]
+    if: needs.setup.outputs.environment == 'staging'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+      deployments: write
+
+    environment:
+      name: staging
+      url: https://staging.example.com
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Create deployment
+        uses: chrnorm/deployment-action@v2
+        id: deployment
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          environment: staging
+
+      - name: Deploy backend
+        run: |
+          echo "🚀 Deploying backend to staging..."
+          echo "Image: ${{ needs.build-and-push.outputs.backend-image }}"
+          # TODO: Add actual deployment commands here
+          # Example: kubectl set image deployment/backend backend=${{ needs.build-and-push.outputs.backend-image }}
+          # Or: SSH to server and run docker-compose pull && docker-compose up -d
+
+      - name: Run database migrations
+        run: |
+          echo "🔄 Running database migrations on staging..."
+          # TODO: Add migration command
+          # Example: kubectl exec deployment/backend -- python manage.py migrate
+
+      - name: Deploy frontend
+        run: |
+          echo "🚀 Deploying frontend to staging..."
+          echo "Image: ${{ needs.build-and-push.outputs.frontend-image }}"
+          # TODO: Add actual deployment commands
+
+      - name: Wait for deployment to stabilize
+        run: |
+          echo "⏳ Waiting for services to be ready..."
+          sleep 30
+
+      - name: Run smoke tests
+        run: |
+          echo "🧪 Running smoke tests..."
+          # Health check
+          response=$(curl -s -o /dev/null -w "%{http_code}" https://staging.example.com/api/v1/health/ || echo "000")
+          if [ "$response" != "200" ]; then
+            echo "❌ Health check failed (HTTP $response)"
+            exit 1
+          fi
+          echo "✅ Health check passed"
+
+      - name: Update deployment status (success)
+        if: success()
+        uses: chrnorm/deployment-status@v2
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          deployment-id: ${{ steps.deployment.outputs.deployment_id }}
+          state: success
+          environment-url: https://staging.example.com
+
+      - name: Update deployment status (failure)
+        if: failure()
+        uses: chrnorm/deployment-status@v2
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          deployment-id: ${{ steps.deployment.outputs.deployment_id }}
+          state: failure
+
+  # Deploy to production environment (requires manual approval)
+  deploy-production:
+    name: Deploy to Production
+    needs: [setup, build-and-push]
+    if: needs.setup.outputs.environment == 'production'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: read
+      deployments: write
+
+    environment:
+      name: production
+      url: https://example.com
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Create deployment
+        uses: chrnorm/deployment-action@v2
+        id: deployment
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          environment: production
+
+      - name: Deploy backend
+        run: |
+          echo "🚀 Deploying backend to production..."
+          echo "Image: ${{ needs.build-and-push.outputs.backend-image }}"
+          # TODO: Add actual deployment commands
+
+      - name: Run database migrations (with backup)
+        run: |
+          echo "💾 Creating database backup..."
+          # TODO: Add backup command
+
+          echo "🔄 Running database migrations on production..."
+          # TODO: Add migration command
+          # Should include rollback capability
+
+      - name: Deploy frontend
+        run: |
+          echo "🚀 Deploying frontend to production..."
+          echo "Image: ${{ needs.build-and-push.outputs.frontend-image }}"
+          # TODO: Add actual deployment commands
+
+      - name: Wait for deployment to stabilize
+        run: |
+          echo "⏳ Waiting for services to be ready..."
+          sleep 60
+
+      - name: Run comprehensive smoke tests
+        run: |
+          echo "🧪 Running comprehensive smoke tests..."
+
+          # Health check
+          response=$(curl -s -o /dev/null -w "%{http_code}" https://example.com/api/v1/health/ || echo "000")
+          if [ "$response" != "200" ]; then
+            echo "❌ Health check failed (HTTP $response)"
+            exit 1
+          fi
+
+          # Readiness check
+          response=$(curl -s -o /dev/null -w "%{http_code}" https://example.com/api/v1/ready/ || echo "000")
+          if [ "$response" != "200" ]; then
+            echo "❌ Readiness check failed (HTTP $response)"
+            exit 1
+          fi
+
+          echo "✅ All smoke tests passed"
+
+      - name: Update deployment status (success)
+        if: success()
+        uses: chrnorm/deployment-status@v2
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          deployment-id: ${{ steps.deployment.outputs.deployment_id }}
+          state: success
+          environment-url: https://example.com
+
+      - name: Update deployment status (failure)
+        if: failure()
+        uses: chrnorm/deployment-status@v2
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          deployment-id: ${{ steps.deployment.outputs.deployment_id }}
+          state: failure
+
+      - name: Notify on failure
+        if: failure()
+        run: |
+          echo "❌ Production deployment failed!"
+          echo "🔄 Consider rolling back to previous version"
+          # TODO: Add notification (Slack, PagerDuty, etc.)
+
+  # Post-deployment verification
+  post-deployment:
+    name: Post-Deployment Verification
+    needs: [setup, deploy-staging, deploy-production]
+    if: always() && needs.setup.outputs.should-deploy == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+
+    steps:
+      - name: Generate deployment summary
+        run: |
+          echo "# 🚀 Deployment Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "## Environment: ${{ needs.setup.outputs.environment }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Status" >> $GITHUB_STEP_SUMMARY
+          echo "- **Tests**: ${{ needs.pre-deployment-tests.result || 'Skipped' }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Build**: ${{ needs.build-and-push.result }}" >> $GITHUB_STEP_SUMMARY
+
+          if [ "${{ needs.setup.outputs.environment }}" == "staging" ]; then
+            echo "- **Deployment**: ${{ needs.deploy-staging.result }}" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "🌐 **Staging URL**: https://staging.example.com" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "- **Deployment**: ${{ needs.deploy-production.result }}" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "🌐 **Production URL**: https://example.com" >> $GITHUB_STEP_SUMMARY
+          fi
+
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Images Deployed" >> $GITHUB_STEP_SUMMARY
+          echo "- Backend: \`${{ needs.build-and-push.outputs.backend-image }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "- Frontend: \`${{ needs.build-and-push.outputs.frontend-image }}\`" >> $GITHUB_STEP_SUMMARY
+
+      - name: Check overall status
+        run: |
+          staging_result="${{ needs.deploy-staging.result }}"
+          production_result="${{ needs.deploy-production.result }}"
+
+          if [ "$staging_result" == "failure" ] || [ "$production_result" == "failure" ]; then
+            echo "❌ Deployment failed"
+            exit 1
+          fi
+
+          echo "✅ Deployment successful"

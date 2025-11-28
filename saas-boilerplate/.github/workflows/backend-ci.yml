@@ -1,0 +1,218 @@
+name: Backend CI
+
+on:
+  pull_request:
+    paths:
+      - 'backend/**'
+      - '.github/workflows/backend-ci.yml'
+  push:
+    branches:
+      - main
+      - develop
+    paths:
+      - 'backend/**'
+
+env:
+  CI: true
+
+permissions:
+  contents: read
+
+jobs:
+  lint:
+    name: Lint & Type Check
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: 'pip'
+      
+      - name: Install dependencies
+        working-directory: ./backend
+        run: |
+          pip install -e .
+          pip install -e .[dev]
+      
+      - name: Run Ruff linter
+        working-directory: ./backend
+        run: ruff check .
+      
+      - name: Run Ruff formatter check
+        working-directory: ./backend
+        run: ruff format --check .
+      
+      - name: Run mypy type checker
+        working-directory: ./backend
+        run: mypy apps config
+        continue-on-error: true
+
+  security:
+    name: Security Scan
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+      security-events: write  # For SARIF upload
+
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      
+      - name: Install dependencies
+        working-directory: ./backend
+        run: pip install bandit[toml] pip-audit
+
+      - name: Run Bandit security scanner (SARIF)
+        working-directory: ./backend
+        run: |
+          bandit -r apps config -f sarif -o bandit-results.sarif || true
+          bandit -r apps config -f json -o bandit-report.json || true
+        continue-on-error: true
+
+      - name: Upload Bandit SARIF to Security tab
+        uses: github/codeql-action/upload-sarif@v3
+        if: always()
+        with:
+          sarif_file: backend/bandit-results.sarif
+          category: bandit
+
+      - name: Run Bandit with human-readable output
+        working-directory: ./backend
+        run: |
+          echo "🔍 Running Bandit security scan..."
+          bandit -r apps config -ll -f screen || true
+        continue-on-error: true
+
+      - name: Check Python dependencies for vulnerabilities
+        working-directory: ./backend
+        run: |
+          echo "🔍 Scanning Python dependencies for known vulnerabilities..."
+          pip-audit --format json --output pip-audit-report.json || true
+          pip-audit --format markdown || true
+        continue-on-error: true
+
+      - name: Upload security reports
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: security-reports
+          path: |
+            backend/bandit-report.json
+            backend/bandit-results.sarif
+            backend/pip-audit-report.json
+          retention-days: 30
+
+  test:
+    name: Run Tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: read
+      pull-requests: write  # For coverage comments (optional)
+
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: test_db
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+      
+      redis:
+        image: redis:8-alpine
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 6379:6379
+    
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: 'pip'
+      
+      - name: Install dependencies
+        working-directory: ./backend
+        run: |
+          pip install -e .
+          pip install -e .[dev]
+      
+      - name: Run migrations
+        working-directory: ./backend
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/test_db
+          REDIS_URL: redis://localhost:6379/0
+          DJANGO_SETTINGS_MODULE: config.settings.development
+          DJANGO_SECRET_KEY: test-secret-key-for-ci
+        run: python manage.py migrate --noinput
+      
+      - name: Run tests with coverage
+        working-directory: ./backend
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/test_db
+          REDIS_URL: redis://localhost:6379/0
+          DJANGO_SETTINGS_MODULE: config.settings.development
+          DJANGO_SECRET_KEY: test-secret-key-for-ci
+        run: |
+          pytest --cov=apps --cov-report=xml --cov-report=term-missing
+      
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v4
+        with:
+          file: ./backend/coverage.xml
+          flags: backend
+          fail_ci_if_error: false
+
+  check-migrations:
+    name: Check Migrations
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: 'pip'
+      
+      - name: Install dependencies
+        working-directory: ./backend
+        run: pip install -e .
+      
+      - name: Check for missing migrations
+        working-directory: ./backend
+        env:
+          DJANGO_SETTINGS_MODULE: config.settings.development
+          DJANGO_SECRET_KEY: test-secret-key-for-ci
+          DATABASE_URL: sqlite:///test.db
+        run: |
+          python manage.py makemigrations --check --dry-run --noinput

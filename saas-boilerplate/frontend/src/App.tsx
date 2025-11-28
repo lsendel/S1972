@@ -1,7 +1,8 @@
 import React, { useEffect } from 'react';
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
-import { initSentry, setSentryUser } from './lib/sentry';
+import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'react-router-dom';
+import { HelmetProvider } from 'react-helmet-async';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { trackPageView } from './lib/analytics';
 import Login from './pages/auth/Login';
 import Signup from './pages/auth/Signup';
 import ForgotPassword from './pages/auth/ForgotPassword';
@@ -21,10 +22,8 @@ import ErrorBoundary from './components/ErrorBoundary';
 import RouteErrorBoundary from './components/RouteErrorBoundary';
 import { PageLoadingSkeleton } from './components/LoadingSkeletons';
 import { ToastProvider } from './components/ToastContainer';
+import { CookieConsentBanner } from './components/CookieConsent/CookieConsentBanner';
 import { useAuth } from './hooks/useAuth';
-
-// Initialize Sentry
-initSentry();
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -45,72 +44,88 @@ function RequireAuth({ children }: { children: React.ReactNode }) {
   return <>{children}</>;
 }
 
+// Component to track page views
+function PageViewTracker() {
+  const location = useLocation();
+
+  useEffect(() => {
+    // Track page view on route change
+    trackPageView(location.pathname + location.search);
+  }, [location]);
+
+  return null;
+}
+
 function App() {
   return (
     <ErrorBoundary>
-      <QueryClientProvider client={queryClient}>
-        <ToastProvider>
-          <Router>
-          <Routes>
-            {/* Public Routes */}
-            <Route path="/login" element={<Login />} errorElement={<RouteErrorBoundary />} />
-            <Route path="/signup" element={<Signup />} errorElement={<RouteErrorBoundary />} />
-            <Route path="/forgot-password" element={<ForgotPassword />} errorElement={<RouteErrorBoundary />} />
-            <Route path="/reset-password/:token" element={<ResetPassword />} errorElement={<RouteErrorBoundary />} />
-            <Route path="/verify-email/:token" element={<VerifyEmail />} errorElement={<RouteErrorBoundary />} />
+      <HelmetProvider>
+        <QueryClientProvider client={queryClient}>
+          <ToastProvider>
+            <Router>
+              <PageViewTracker />
+              <Routes>
+                {/* Public Routes */}
+                <Route path="/login" element={<Login />} errorElement={<RouteErrorBoundary />} />
+                <Route path="/signup" element={<Signup />} errorElement={<RouteErrorBoundary />} />
+                <Route path="/forgot-password" element={<ForgotPassword />} errorElement={<RouteErrorBoundary />} />
+                <Route path="/reset-password/:uid/:token" element={<ResetPassword />} errorElement={<RouteErrorBoundary />} />
+                <Route path="/verify-email/:token" element={<VerifyEmail />} errorElement={<RouteErrorBoundary />} />
 
-            {/* Onboarding */}
-            <Route
-              path="/onboarding"
-              element={
-                <RequireAuth>
-                  <CreateOrganization />
-                </RequireAuth>
-              }
-              errorElement={<RouteErrorBoundary />}
-            />
+                {/* Onboarding */}
+                <Route
+                  path="/onboarding"
+                  element={
+                    <RequireAuth>
+                      <CreateOrganization />
+                    </RequireAuth>
+                  }
+                  errorElement={<RouteErrorBoundary />}
+                />
 
-            {/* Organization Routes with AppLayout */}
-            <Route
-              path="/app/:orgSlug"
-              element={
-                <RequireAuth>
-                  <AppLayout />
-                </RequireAuth>
-              }
-              errorElement={<RouteErrorBoundary />}
-            >
-              <Route index element={<Dashboard />} />
-              <Route path="settings/profile" element={<ProfileSettings />} />
-              <Route path="settings/security" element={<SecuritySettings />} />
-              <Route path="settings/team" element={<TeamSettings />} />
-              <Route path="settings/billing" element={<BillingSettings />} />
-            </Route>
+                {/* Organization Routes with AppLayout */}
+                <Route
+                  path="/app/:orgSlug"
+                  element={
+                    <RequireAuth>
+                      <AppLayout />
+                    </RequireAuth>
+                  }
+                  errorElement={<RouteErrorBoundary />}
+                >
+                  <Route index element={<Dashboard />} />
+                  <Route path="settings/profile" element={<ProfileSettings />} />
+                  <Route path="settings/security" element={<SecuritySettings />} />
+                  <Route path="settings/team" element={<TeamSettings />} />
+                  <Route path="settings/billing" element={<BillingSettings />} />
+                </Route>
 
-            {/* Admin Routes */}
-            <Route
-              path="/admin"
-              element={
-                <RequireAuth>
-                  <AdminLayout />
-                </RequireAuth>
-              }
-              errorElement={<RouteErrorBoundary />}
-            >
-              <Route index element={<AdminDashboard />} />
-              <Route path="activity" element={<ActivityLogs />} />
-            </Route>
+                {/* Admin Routes */}
+                <Route
+                  path="/admin"
+                  element={
+                    <RequireAuth>
+                      <AdminLayout />
+                    </RequireAuth>
+                  }
+                  errorElement={<RouteErrorBoundary />}
+                >
+                  <Route index element={<AdminDashboard />} />
+                  <Route path="activity" element={<ActivityLogs />} />
+                </Route>
 
-            {/* Redirects */}
-            <Route path="/" element={<Navigate to="/login" />} />
-            <Route path="/app" element={<Navigate to="/onboarding" />} />
+                {/* Redirects */}
+                <Route path="/" element={<Navigate to="/login" />} />
+                <Route path="/app" element={<Navigate to="/onboarding" />} />
 
-            {/* 404 Catch-all */}
-            <Route path="*" element={<RouteErrorBoundary />} />
-          </Routes>
-          </Router>
-        </ToastProvider>
-      </QueryClientProvider>
+                {/* 404 Catch-all */}
+                <Route path="*" element={<RouteErrorBoundary />} />
+              </Routes>
+              <CookieConsentBanner />
+            </Router>
+          </ToastProvider>
+        </QueryClientProvider>
+      </HelmetProvider>
     </ErrorBoundary>
   );
 }

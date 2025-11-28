@@ -85,6 +85,8 @@ def _dispatch_event(event: dict) -> None:
         # Mark subscription as past due so the app can react (e.g., restrict features)
         data_object['status'] = 'past_due'
         handle_subscription_updated(data_object)
+    elif event_type == 'invoice.paid':
+        handle_invoice_paid(data_object)
     else:
         logger.info("Stripe webhook: ignored event %s", event_type)
 
@@ -114,4 +116,21 @@ def handle_subscription_updated(subscription: dict) -> None:
 def handle_subscription_deleted(subscription: dict) -> None:
     logger.info("Stripe subscription deleted: %s", subscription.get('id'))
     subscription['status'] = 'canceled'
+    sync_subscription_from_stripe(subscription)
+
+
+def handle_invoice_paid(invoice: dict) -> None:
+    """
+    When an invoice is paid, ensure the subscription status is active.
+    """
+    stripe = _get_stripe_client()
+    subscription_id = invoice.get('subscription')
+    if not subscription_id:
+        return
+
+    # We fetch the subscription to get the latest state including current_period_end
+    subscription = stripe.Subscription.retrieve(
+        subscription_id,
+        expand=['latest_invoice.payment_intent', 'items.data.price.product'],
+    )
     sync_subscription_from_stripe(subscription)

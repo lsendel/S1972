@@ -1,0 +1,43 @@
+version: '3.8'
+
+# Staging environment configuration
+# Production-like environment for pre-production testing
+
+services:
+  backend:
+    environment:
+      - DJANGO_SETTINGS_MODULE=config.settings.production
+      - DJANGO_DEBUG=False
+      - DJANGO_ALLOWED_HOSTS=${DJANGO_ALLOWED_HOSTS:-staging.example.com,api.staging.example.com}
+      - DATABASE_URL=${DATABASE_URL:-postgres://postgres:postgres@db:5432/saas_stage}
+      - REDIS_URL=${REDIS_URL:-redis://redis:6379/2}
+      - CELERY_BROKER_URL=${CELERY_BROKER_URL:-redis://redis:6379/2}
+      - DJANGO_SECRET_KEY=${DJANGO_SECRET_KEY}
+      - STRIPE_SECRET_KEY=${STRIPE_SECRET_KEY}
+      - STRIPE_PUBLISHABLE_KEY=${STRIPE_PUBLISHABLE_KEY}
+      - EMAIL_HOST=${EMAIL_HOST}
+      - EMAIL_PORT=${EMAIL_PORT:-587}
+      - EMAIL_USE_TLS=${EMAIL_USE_TLS:-True}
+      - EMAIL_HOST_USER=${EMAIL_HOST_USER}
+      - EMAIL_HOST_PASSWORD=${EMAIL_HOST_PASSWORD}
+    # No volume mounts in staging - use built image
+
+  frontend:
+    environment:
+      - VITE_API_URL=${VITE_API_URL:-https://api.staging.example.com}
+      - NODE_ENV=production
+    # No volume mounts in staging - use built image
+
+  db:
+    environment:
+      - POSTGRES_DB=saas_stage
+      - POSTGRES_USER=${POSTGRES_USER:-postgres}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-postgres}
+
+  celery:
+    environment:
+      - DJANGO_SETTINGS_MODULE=config.settings.production
+      - DATABASE_URL=${DATABASE_URL:-postgres://postgres:postgres@db:5432/saas_stage}
+      - REDIS_URL=${REDIS_URL:-redis://redis:6379/2}
+      - DJANGO_SECRET_KEY=${DJANGO_SECRET_KEY}
+    # No volume mounts in staging - use built image

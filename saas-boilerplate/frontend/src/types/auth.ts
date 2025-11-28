@@ -5,6 +5,7 @@ export interface User {
     avatar_url?: string;
     is_active: boolean;
     is_staff: boolean;
+    is_superuser?: boolean;
     email_verified: boolean;
     totp_enabled: boolean;
 }

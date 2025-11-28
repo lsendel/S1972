@@ -1,0 +1,310 @@
+name: Container Build & Scan
+
+on:
+  push:
+    branches:
+      - main
+      - develop
+    paths:
+      - 'backend/**'
+      - 'frontend/**'
+      - '.github/workflows/container-build.yml'
+  pull_request:
+    branches:
+      - main
+      - develop
+    paths:
+      - 'backend/**'
+      - 'frontend/**'
+      - '.github/workflows/container-build.yml'
+
+env:
+  CI: true
+  REGISTRY: ghcr.io
+
+permissions:
+  contents: read
+
+jobs:
+  build-backend:
+    name: Build & Scan Backend
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: read
+      packages: write  # For GHCR push
+      security-events: write  # For Trivy SARIF upload
+      id-token: write  # For Cosign keyless signing
+
+    outputs:
+      image-digest: ${{ steps.build.outputs.digest }}
+      image-tag: ${{ steps.meta.outputs.tags }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GitHub Container Registry
+        if: github.event_name != 'pull_request'
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract metadata for Docker
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ github.repository }}/backend
+          tags: |
+            type=ref,event=branch
+            type=ref,event=pr
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=sha,prefix={{branch}}-
+            type=raw,value=latest,enable={{is_default_branch}}
+
+      - name: Build Docker image
+        id: build
+        uses: docker/build-push-action@v5
+        with:
+          context: ./backend
+          file: ./backend/Dockerfile
+          push: false
+          load: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          build-args: |
+            BUILDKIT_INLINE_CACHE=1
+
+      - name: Install Syft for SBOM generation
+        uses: anchore/sbom-action/download-syft@v0.15.10
+
+      - name: Generate SBOM
+        run: |
+          syft ${{ steps.meta.outputs.tags }} -o spdx-json=backend-sbom.spdx.json
+          syft ${{ steps.meta.outputs.tags }} -o cyclonedx-json=backend-sbom.cyclonedx.json
+
+      - name: Upload SBOM artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: backend-sbom
+          path: |
+            backend-sbom.spdx.json
+            backend-sbom.cyclonedx.json
+          retention-days: 90
+
+      - name: Run Trivy vulnerability scanner
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: ${{ steps.meta.outputs.tags }}
+          format: 'sarif'
+          output: 'trivy-backend-results.sarif'
+          severity: 'CRITICAL,HIGH'
+          exit-code: '0'  # Don't fail build, just report
+
+      - name: Upload Trivy results to GitHub Security tab
+        uses: github/codeql-action/upload-sarif@v3
+        if: always()
+        with:
+          sarif_file: 'trivy-backend-results.sarif'
+          category: 'trivy-backend'
+
+      - name: Run Trivy for human-readable output
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: ${{ steps.meta.outputs.tags }}
+          format: 'table'
+          severity: 'CRITICAL,HIGH,MEDIUM'
+
+      - name: Install Cosign
+        if: github.event_name != 'pull_request'
+        uses: sigstore/cosign-installer@v3
+
+      - name: Push image to GHCR
+        if: github.event_name != 'pull_request'
+        run: |
+          docker push ${{ steps.meta.outputs.tags }}
+
+      - name: Sign image with Cosign (keyless)
+        if: github.event_name != 'pull_request'
+        env:
+          COSIGN_EXPERIMENTAL: 1
+        run: |
+          cosign sign --yes ${{ steps.meta.outputs.tags }}@${{ steps.build.outputs.digest }}
+
+      - name: Verify signature
+        if: github.event_name != 'pull_request'
+        env:
+          COSIGN_EXPERIMENTAL: 1
+        run: |
+          cosign verify ${{ steps.meta.outputs.tags }}@${{ steps.build.outputs.digest }}
+
+  build-frontend:
+    name: Build & Scan Frontend
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+      packages: write  # For GHCR push
+      security-events: write  # For Trivy SARIF upload
+      id-token: write  # For Cosign keyless signing
+
+    outputs:
+      image-digest: ${{ steps.build.outputs.digest }}
+      image-tag: ${{ steps.meta.outputs.tags }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GitHub Container Registry
+        if: github.event_name != 'pull_request'
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract metadata for Docker
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ github.repository }}/frontend
+          tags: |
+            type=ref,event=branch
+            type=ref,event=pr
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=sha,prefix={{branch}}-
+            type=raw,value=latest,enable={{is_default_branch}}
+
+      - name: Build Docker image
+        id: build
+        uses: docker/build-push-action@v5
+        with:
+          context: ./frontend
+          file: ./frontend/Dockerfile
+          push: false
+          load: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          build-args: |
+            BUILDKIT_INLINE_CACHE=1
+            VITE_API_URL=/api/v1
+
+      - name: Install Syft for SBOM generation
+        uses: anchore/sbom-action/download-syft@v0.15.10
+
+      - name: Generate SBOM
+        run: |
+          syft ${{ steps.meta.outputs.tags }} -o spdx-json=frontend-sbom.spdx.json
+          syft ${{ steps.meta.outputs.tags }} -o cyclonedx-json=frontend-sbom.cyclonedx.json
+
+      - name: Upload SBOM artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: frontend-sbom
+          path: |
+            frontend-sbom.spdx.json
+            frontend-sbom.cyclonedx.json
+          retention-days: 90
+
+      - name: Run Trivy vulnerability scanner
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: ${{ steps.meta.outputs.tags }}
+          format: 'sarif'
+          output: 'trivy-frontend-results.sarif'
+          severity: 'CRITICAL,HIGH'
+          exit-code: '0'  # Don't fail build, just report
+
+      - name: Upload Trivy results to GitHub Security tab
+        uses: github/codeql-action/upload-sarif@v3
+        if: always()
+        with:
+          sarif_file: 'trivy-frontend-results.sarif'
+          category: 'trivy-frontend'
+
+      - name: Run Trivy for human-readable output
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: ${{ steps.meta.outputs.tags }}
+          format: 'table'
+          severity: 'CRITICAL,HIGH,MEDIUM'
+
+      - name: Install Cosign
+        if: github.event_name != 'pull_request'
+        uses: sigstore/cosign-installer@v3
+
+      - name: Push image to GHCR
+        if: github.event_name != 'pull_request'
+        run: |
+          docker push ${{ steps.meta.outputs.tags }}
+
+      - name: Sign image with Cosign (keyless)
+        if: github.event_name != 'pull_request'
+        env:
+          COSIGN_EXPERIMENTAL: 1
+        run: |
+          cosign sign --yes ${{ steps.meta.outputs.tags }}@${{ steps.build.outputs.digest }}
+
+      - name: Verify signature
+        if: github.event_name != 'pull_request'
+        env:
+          COSIGN_EXPERIMENTAL: 1
+        run: |
+          cosign verify ${{ steps.meta.outputs.tags }}@${{ steps.build.outputs.digest }}
+
+  security-summary:
+    name: Security Summary
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    needs: [build-backend, build-frontend]
+    if: always()
+    permissions:
+      contents: read
+
+    steps:
+      - name: Download Backend SBOM
+        uses: actions/download-artifact@v4
+        with:
+          name: backend-sbom
+          path: ./sbom/backend
+
+      - name: Download Frontend SBOM
+        uses: actions/download-artifact@v4
+        with:
+          name: frontend-sbom
+          path: ./sbom/frontend
+
+      - name: Generate Security Summary
+        run: |
+          echo "# 🔒 Container Security Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "## Backend Image" >> $GITHUB_STEP_SUMMARY
+          echo "- **Digest**: \`${{ needs.build-backend.outputs.image-digest }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "- **Tags**: \`${{ needs.build-backend.outputs.image-tag }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "- **SBOM**: Generated (SPDX + CycloneDX)" >> $GITHUB_STEP_SUMMARY
+          echo "- **Vulnerability Scan**: Completed (see Security tab)" >> $GITHUB_STEP_SUMMARY
+          echo "- **Signature**: ${{ github.event_name != 'pull_request' && 'Signed with Cosign' || 'Skipped (PR)' }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "## Frontend Image" >> $GITHUB_STEP_SUMMARY
+          echo "- **Digest**: \`${{ needs.build-frontend.outputs.image-digest }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "- **Tags**: \`${{ needs.build-frontend.outputs.image-tag }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "- **SBOM**: Generated (SPDX + CycloneDX)" >> $GITHUB_STEP_SUMMARY
+          echo "- **Vulnerability Scan**: Completed (see Security tab)" >> $GITHUB_STEP_SUMMARY
+          echo "- **Signature**: ${{ github.event_name != 'pull_request' && 'Signed with Cosign' || 'Skipped (PR)' }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "## 📋 Artifacts" >> $GITHUB_STEP_SUMMARY
+          echo "- SBOM files available for download (90 day retention)" >> $GITHUB_STEP_SUMMARY
+          echo "- Trivy scan results uploaded to Security → Code Scanning" >> $GITHUB_STEP_SUMMARY

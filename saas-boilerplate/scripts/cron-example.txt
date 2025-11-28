@@ -1,0 +1,20 @@
+# Cron Job Examples for Production
+# Add these to your crontab using: crontab -e
+
+# Daily database backup at 2 AM
+0 2 * * * cd /path/to/saas-boilerplate && ./scripts/backup-database.sh /backups 30 >> /var/log/backup.log 2>&1
+
+# Weekly backup to S3 (requires AWS CLI configured)
+0 3 * * 0 cd /path/to/saas-boilerplate && AWS_S3_BACKUP_BUCKET=my-backups ./scripts/backup-database.sh /backups 7 >> /var/log/backup-s3.log 2>&1
+
+# Monthly full backup with 90-day retention
+0 4 1 * * cd /path/to/saas-boilerplate && ./scripts/backup-database.sh /backups/monthly 90 >> /var/log/backup-monthly.log 2>&1
+
+# Test database connection every 5 minutes
+*/5 * * * * docker-compose -f /path/to/saas-boilerplate/docker-compose.prod.yml exec -T db pg_isready -U postgres
+
+# Clean Docker system once a week (Sunday 4 AM)
+0 4 * * 0 docker system prune -af --volumes >> /var/log/docker-cleanup.log 2>&1
+
+# Rotate logs monthly
+0 0 1 * * find /var/log -name "*.log" -type f -mtime +30 -delete

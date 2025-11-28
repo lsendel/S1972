@@ -1,0 +1,1818 @@
+openapi: 3.0.3
+info:
+  title: SaaS Boilerplate API
+  version: 1.0.0
+  description: API documentation for the SaaS Boilerplate
+paths:
+  /api/v1/admin/activity-logs/:
+    get:
+      operationId: admin_activity_logs_list
+      description: Retrieve a paginated list of activity logs with filtering and search
+        capabilities.
+      summary: List activity logs
+      parameters:
+      - in: query
+        name: action
+        schema:
+          type: string
+          enum:
+          - admin.data_export
+          - admin.user_activate
+          - admin.user_impersonate
+          - admin.user_suspend
+          - org.created
+          - org.deleted
+          - org.member_invited
+          - org.member_joined
+          - org.member_removed
+          - org.role_changed
+          - org.updated
+          - sub.cancelled
+          - sub.created
+          - sub.downgraded
+          - sub.payment_failed
+          - sub.renewed
+          - sub.upgraded
+          - user.2fa_disabled
+          - user.2fa_enabled
+          - user.login
+          - user.logout
+          - user.password_change
+          - user.password_reset
+          - user.profile_update
+          - user.register
+        description: |-
+          * `user.login` - User Login
+          * `user.logout` - User Logout
+          * `user.register` - User Registration
+          * `user.password_change` - Password Changed
+          * `user.password_reset` - Password Reset
+          * `user.2fa_enabled` - 2FA Enabled
+          * `user.2fa_disabled` - 2FA Disabled
+          * `user.profile_update` - Profile Updated
+          * `org.created` - Organization Created
+          * `org.updated` - Organization Updated
+          * `org.deleted` - Organization Deleted
+          * `org.member_invited` - Member Invited
+          * `org.member_joined` - Member Joined
+          * `org.member_removed` - Member Removed
+          * `org.role_changed` - Member Role Changed
+          * `sub.created` - Subscription Created
+          * `sub.upgraded` - Subscription Upgraded
+          * `sub.downgraded` - Subscription Downgraded
+          * `sub.cancelled` - Subscription Cancelled
+          * `sub.renewed` - Subscription Renewed
+          * `sub.payment_failed` - Payment Failed
+          * `admin.user_impersonate` - User Impersonated
+          * `admin.user_suspend` - User Suspended
+          * `admin.user_activate` - User Activated
+          * `admin.data_export` - Data Exported
+      - name: ordering
+        required: false
+        in: query
+        description: Which field to use when ordering the results.
+        schema:
+          type: string
+      - name: page
+        required: false
+        in: query
+        description: A page number within the paginated result set.
+        schema:
+          type: integer
+      - name: page_size
+        required: false
+        in: query
+        description: Number of results to return per page.
+        schema:
+          type: integer
+      - name: search
+        required: false
+        in: query
+        description: A search term.
+        schema:
+          type: string
+      - in: query
+        name: user
+        schema:
+          type: string
+          format: uuid
+      tags:
+      - Analytics
+      security:
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedActivityLogList'
+          description: ''
+  /api/v1/admin/activity-logs/{id}/:
+    get:
+      operationId: admin_activity_logs_retrieve
+      description: Retrieve detailed information about a specific activity log entry.
+      summary: Get activity log details
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this activity log.
+        required: true
+      tags:
+      - Analytics
+      security:
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ActivityLog'
+          description: ''
+  /api/v1/admin/analytics/aggregate/:
+    post:
+      operationId: admin_analytics_aggregate_create
+      description: Manually trigger aggregation of daily metrics. Normally runs automatically
+        via Celery.
+      summary: Aggregate daily metrics
+      tags:
+      - Analytics
+      security:
+      - cookieAuth: []
+      responses:
+        '200':
+          description: No response body
+  /api/v1/admin/analytics/dashboard/:
+    get:
+      operationId: admin_analytics_dashboard_retrieve
+      description: Retrieve key metrics for the admin dashboard including users, organizations,
+        subscriptions, and revenue.
+      summary: Get dashboard statistics
+      tags:
+      - Analytics
+      security:
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DashboardStats'
+          description: ''
+  /api/v1/admin/analytics/time_series/:
+    get:
+      operationId: admin_analytics_time_series_retrieve
+      description: Retrieve time series data for a specific metric over a specified
+        number of days.
+      summary: Get time series data
+      parameters:
+      - in: query
+        name: days
+        schema:
+          type: integer
+        description: 'Number of days of data (default: 30)'
+      - in: query
+        name: metric_type
+        schema:
+          type: string
+        description: Type of metric (e.g., users.new, revenue.mrr)
+        required: true
+      tags:
+      - Analytics
+      security:
+      - cookieAuth: []
+      responses:
+        '200':
+          description: No response body
+  /api/v1/admin/sessions/:
+    get:
+      operationId: admin_sessions_list
+      description: Retrieve a paginated list of user sessions.
+      summary: List user sessions
+      parameters:
+      - in: query
+        name: is_active
+        schema:
+          type: boolean
+      - name: ordering
+        required: false
+        in: query
+        description: Which field to use when ordering the results.
+        schema:
+          type: string
+      - name: page
+        required: false
+        in: query
+        description: A page number within the paginated result set.
+        schema:
+          type: integer
+      - name: page_size
+        required: false
+        in: query
+        description: Number of results to return per page.
+        schema:
+          type: integer
+      - name: search
+        required: false
+        in: query
+        description: A search term.
+        schema:
+          type: string
+      - in: query
+        name: user
+        schema:
+          type: string
+          format: uuid
+      tags:
+      - Analytics
+      security:
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedUserSessionList'
+          description: ''
+  /api/v1/admin/sessions/{id}/:
+    get:
+      operationId: admin_sessions_retrieve
+      description: |-
+        User session endpoints.
+
+        Provides information about user sessions for analytics.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this user session.
+        required: true
+      tags:
+      - admin
+      security:
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserSession'
+          description: ''
+  /api/v1/admin/sessions/active/:
+    get:
+      operationId: admin_sessions_active_retrieve
+      description: Retrieve currently active user sessions.
+      summary: Get active sessions
+      tags:
+      - Analytics
+      security:
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserSession'
+          description: ''
+  /api/v1/auth/2fa/backup-codes/:
+    get:
+      operationId: auth_2fa_backup_codes_list
+      description: List backup codes (without revealing the actual codes).
+      tags:
+      - auth
+      security:
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/BackupCode'
+          description: ''
+  /api/v1/auth/2fa/backup-codes/regenerate/:
+    post:
+      operationId: auth_2fa_backup_codes_regenerate_create
+      description: |-
+        Regenerate backup codes.
+        Requires password confirmation for security.
+      tags:
+      - auth
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PasswordConfirmationRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PasswordConfirmationRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PasswordConfirmationRequest'
+        required: true
+      security:
+      - cookieAuth: []
+      responses:
+        '200':
+          description: No response body
+  /api/v1/auth/2fa/disable/:
+    post:
+      operationId: auth_2fa_disable_create
+      description: |-
+        Disable TOTP for the user.
+        Requires password confirmation for security.
+      tags:
+      - auth
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PasswordConfirmationRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PasswordConfirmationRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PasswordConfirmationRequest'
+        required: true
+      security:
+      - cookieAuth: []
+      responses:
+        '200':
+          description: No response body
+  /api/v1/auth/2fa/enable/:
+    post:
+      operationId: auth_2fa_enable_create
+      description: |-
+        Enable TOTP by verifying a token from the new device.
+        Generates backup codes upon successful verification.
+      tags:
+      - auth
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TOTPEnableRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/TOTPEnableRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/TOTPEnableRequest'
+        required: true
+      security:
+      - cookieAuth: []
+      responses:
+        '200':
+          description: No response body
+  /api/v1/auth/2fa/setup/:
+    post:
+      operationId: auth_2fa_setup_create
+      description: |-
+        Initiate TOTP setup for the user.
+        Creates a new TOTP device and returns the provisioning URI and QR code.
+      tags:
+      - auth
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TOTPSetupRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/TOTPSetupRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/TOTPSetupRequest'
+      security:
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TOTPDevice'
+          description: ''
+  /api/v1/auth/2fa/status/:
+    get:
+      operationId: auth_2fa_status_retrieve
+      description: Get the current 2FA status for the authenticated user.
+      tags:
+      - auth
+      security:
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TOTPDevice'
+          description: ''
+  /api/v1/auth/2fa/verify/:
+    post:
+      operationId: auth_2fa_verify_create
+      description: |-
+        Verify TOTP token or backup code during login.
+        Used after successful password authentication.
+      tags:
+      - auth
+      security:
+      - cookieAuth: []
+      responses:
+        '200':
+          description: No response body
+  /api/v1/auth/csrf/:
+    get:
+      operationId: auth_csrf_retrieve
+      tags:
+      - auth
+      security:
+      - cookieAuth: []
+      - {}
+      responses:
+        '200':
+          description: No response body
+  /api/v1/auth/email/verify/:
+    post:
+      operationId: auth_email_verify_create
+      tags:
+      - auth
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/VerifyEmailRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/VerifyEmailRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/VerifyEmailRequest'
+        required: true
+      security:
+      - cookieAuth: []
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VerifyEmail'
+          description: ''
+  /api/v1/auth/login/:
+    post:
+      operationId: auth_login_create
+      tags:
+      - auth
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+        required: true
+      security:
+      - cookieAuth: []
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Login'
+          description: ''
+  /api/v1/auth/logout/:
+    post:
+      operationId: auth_logout_create
+      tags:
+      - auth
+      security:
+      - cookieAuth: []
+      responses:
+        '200':
+          description: No response body
+  /api/v1/auth/me/:
+    get:
+      operationId: auth_me_retrieve
+      tags:
+      - auth
+      security:
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: {}
+                description: Unspecified response body
+          description: ''
+    patch:
+      operationId: auth_me_partial_update
+      tags:
+      - auth
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: {}
+              description: Unspecified request body
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              additionalProperties: {}
+              description: Unspecified request body
+          multipart/form-data:
+            schema:
+              type: object
+              additionalProperties: {}
+              description: Unspecified request body
+      security:
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: {}
+                description: Unspecified response body
+          description: ''
+  /api/v1/auth/oauth/accounts/:
+    get:
+      operationId: auth_oauth_accounts_retrieve
+      description: List all connected OAuth accounts for the current user.
+      tags:
+      - auth
+      security:
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SocialAccountList'
+          description: ''
+  /api/v1/auth/oauth/authorize/{provider}/:
+    get:
+      operationId: auth_oauth_authorize_retrieve
+      description: |-
+        Get the OAuth authorization URL for a specific provider.
+        The frontend should redirect the user to this URL to initiate OAuth flow.
+      parameters:
+      - in: path
+        name: provider
+        schema:
+          type: string
+        required: true
+      tags:
+      - auth
+      security:
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OAuthAuthorizationUrl'
+          description: ''
+  /api/v1/auth/oauth/callback/{provider}/:
+    get:
+      operationId: auth_oauth_callback_retrieve
+      description: |-
+        OAuth callback endpoint.
+        This is called by the OAuth provider after user authorization.
+
+        Note: This is a placeholder. In a real implementation, you would use
+        allauth's built-in callback handling or implement your own token exchange.
+      parameters:
+      - in: path
+        name: provider
+        schema:
+          type: string
+        required: true
+      tags:
+      - auth
+      security:
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OAuthCallback'
+          description: ''
+  /api/v1/auth/oauth/disconnect/{provider}/:
+    post:
+      operationId: auth_oauth_disconnect_create
+      description: Disconnect an OAuth account from the user's profile.
+      parameters:
+      - in: path
+        name: provider
+        schema:
+          type: string
+        required: true
+      tags:
+      - auth
+      security:
+      - cookieAuth: []
+      responses:
+        '200':
+          description: No response body
+  /api/v1/auth/oauth/providers/:
+    get:
+      operationId: auth_oauth_providers_retrieve
+      description: List all available OAuth providers and their connection status.
+      tags:
+      - auth
+      security:
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OAuthProviderList'
+          description: ''
+  /api/v1/auth/password/change/:
+    post:
+      operationId: auth_password_change_create
+      tags:
+      - auth
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PasswordChangeRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PasswordChangeRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PasswordChangeRequest'
+        required: true
+      security:
+      - cookieAuth: []
+      responses:
+        '200':
+          description: No response body
+  /api/v1/auth/password/reset/:
+    post:
+      operationId: auth_password_reset_create
+      tags:
+      - auth
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PasswordResetRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PasswordResetRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PasswordResetRequest'
+        required: true
+      security:
+      - cookieAuth: []
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PasswordReset'
+          description: ''
+  /api/v1/auth/password/reset/confirm/:
+    post:
+      operationId: auth_password_reset_confirm_create
+      tags:
+      - auth
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PasswordResetConfirmRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PasswordResetConfirmRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PasswordResetConfirmRequest'
+        required: true
+      security:
+      - cookieAuth: []
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PasswordResetConfirm'
+          description: ''
+  /api/v1/auth/signup/:
+    post:
+      operationId: auth_signup_create
+      tags:
+      - auth
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SignupRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/SignupRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/SignupRequest'
+        required: true
+      security:
+      - cookieAuth: []
+      - {}
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Signup'
+          description: ''
+  /api/v1/organizations/:
+    get:
+      operationId: organizations_list
+      parameters:
+      - name: ordering
+        required: false
+        in: query
+        description: Which field to use when ordering the results.
+        schema:
+          type: string
+      - name: page
+        required: false
+        in: query
+        description: A page number within the paginated result set.
+        schema:
+          type: integer
+      - name: page_size
+        required: false
+        in: query
+        description: Number of results to return per page.
+        schema:
+          type: integer
+      - name: search
+        required: false
+        in: query
+        description: A search term.
+        schema:
+          type: string
+      tags:
+      - organizations
+      security:
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedOrganizationList'
+          description: ''
+    post:
+      operationId: organizations_create
+      tags:
+      - organizations
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/OrganizationRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/OrganizationRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/OrganizationRequest'
+        required: true
+      security:
+      - cookieAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Organization'
+          description: ''
+  /api/v1/organizations/{organization_slug}/invitations/:
+    get:
+      operationId: organizations_invitations_list
+      parameters:
+      - name: ordering
+        required: false
+        in: query
+        description: Which field to use when ordering the results.
+        schema:
+          type: string
+      - in: path
+        name: organization_slug
+        schema:
+          type: string
+        required: true
+      - name: search
+        required: false
+        in: query
+        description: A search term.
+        schema:
+          type: string
+      tags:
+      - organizations
+      security:
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Invitation'
+          description: ''
+  /api/v1/organizations/{organization_slug}/invitations/{id}/:
+    get:
+      operationId: organizations_invitations_retrieve
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this invitation.
+        required: true
+      - in: path
+        name: organization_slug
+        schema:
+          type: string
+        required: true
+      tags:
+      - organizations
+      security:
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Invitation'
+          description: ''
+  /api/v1/organizations/{organization_slug}/members/:
+    get:
+      operationId: organizations_members_list
+      parameters:
+      - name: ordering
+        required: false
+        in: query
+        description: Which field to use when ordering the results.
+        schema:
+          type: string
+      - in: path
+        name: organization_slug
+        schema:
+          type: string
+        required: true
+      - name: search
+        required: false
+        in: query
+        description: A search term.
+        schema:
+          type: string
+      tags:
+      - organizations
+      security:
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Membership'
+          description: ''
+  /api/v1/organizations/{organization_slug}/members/{id}/:
+    get:
+      operationId: organizations_members_retrieve
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this membership.
+        required: true
+      - in: path
+        name: organization_slug
+        schema:
+          type: string
+        required: true
+      tags:
+      - organizations
+      security:
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Membership'
+          description: ''
+  /api/v1/organizations/{organization_slug}/members/invite/:
+    post:
+      operationId: organizations_members_invite_create
+      parameters:
+      - in: path
+        name: organization_slug
+        schema:
+          type: string
+        required: true
+      tags:
+      - organizations
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MembershipRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/MembershipRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/MembershipRequest'
+      security:
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Membership'
+          description: ''
+  /api/v1/organizations/{slug}/:
+    get:
+      operationId: organizations_retrieve
+      parameters:
+      - in: path
+        name: slug
+        schema:
+          type: string
+        required: true
+      tags:
+      - organizations
+      security:
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Organization'
+          description: ''
+    put:
+      operationId: organizations_update
+      parameters:
+      - in: path
+        name: slug
+        schema:
+          type: string
+        required: true
+      tags:
+      - organizations
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/OrganizationRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/OrganizationRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/OrganizationRequest'
+        required: true
+      security:
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Organization'
+          description: ''
+    patch:
+      operationId: organizations_partial_update
+      parameters:
+      - in: path
+        name: slug
+        schema:
+          type: string
+        required: true
+      tags:
+      - organizations
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedOrganizationRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedOrganizationRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedOrganizationRequest'
+      security:
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Organization'
+          description: ''
+    delete:
+      operationId: organizations_destroy
+      parameters:
+      - in: path
+        name: slug
+        schema:
+          type: string
+        required: true
+      tags:
+      - organizations
+      security:
+      - cookieAuth: []
+      responses:
+        '204':
+          description: No response body
+  /api/v1/subscriptions/current/:
+    get:
+      operationId: subscriptions_current_retrieve
+      tags:
+      - subscriptions
+      security:
+      - cookieAuth: []
+      responses:
+        '200':
+          description: No response body
+  /api/v1/subscriptions/plans/:
+    get:
+      operationId: subscriptions_plans_retrieve
+      tags:
+      - subscriptions
+      security:
+      - cookieAuth: []
+      - {}
+      responses:
+        '200':
+          description: No response body
+components:
+  schemas:
+    ActionEnum:
+      enum:
+      - user.login
+      - user.logout
+      - user.register
+      - user.password_change
+      - user.password_reset
+      - user.2fa_enabled
+      - user.2fa_disabled
+      - user.profile_update
+      - org.created
+      - org.updated
+      - org.deleted
+      - org.member_invited
+      - org.member_joined
+      - org.member_removed
+      - org.role_changed
+      - sub.created
+      - sub.upgraded
+      - sub.downgraded
+      - sub.cancelled
+      - sub.renewed
+      - sub.payment_failed
+      - admin.user_impersonate
+      - admin.user_suspend
+      - admin.user_activate
+      - admin.data_export
+      type: string
+      description: |-
+        * `user.login` - User Login
+        * `user.logout` - User Logout
+        * `user.register` - User Registration
+        * `user.password_change` - Password Changed
+        * `user.password_reset` - Password Reset
+        * `user.2fa_enabled` - 2FA Enabled
+        * `user.2fa_disabled` - 2FA Disabled
+        * `user.profile_update` - Profile Updated
+        * `org.created` - Organization Created
+        * `org.updated` - Organization Updated
+        * `org.deleted` - Organization Deleted
+        * `org.member_invited` - Member Invited
+        * `org.member_joined` - Member Joined
+        * `org.member_removed` - Member Removed
+        * `org.role_changed` - Member Role Changed
+        * `sub.created` - Subscription Created
+        * `sub.upgraded` - Subscription Upgraded
+        * `sub.downgraded` - Subscription Downgraded
+        * `sub.cancelled` - Subscription Cancelled
+        * `sub.renewed` - Subscription Renewed
+        * `sub.payment_failed` - Payment Failed
+        * `admin.user_impersonate` - User Impersonated
+        * `admin.user_suspend` - User Suspended
+        * `admin.user_activate` - User Activated
+        * `admin.data_export` - Data Exported
+    ActivityLog:
+      type: object
+      description: Serializer for activity logs.
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        user:
+          type: string
+          format: uuid
+          readOnly: true
+          nullable: true
+        user_email:
+          type: string
+          readOnly: true
+        user_name:
+          type: string
+          readOnly: true
+        action:
+          allOf:
+          - $ref: '#/components/schemas/ActionEnum'
+          readOnly: true
+        action_display:
+          type: string
+          readOnly: true
+        description:
+          type: string
+          readOnly: true
+        ip_address:
+          type: string
+          readOnly: true
+          nullable: true
+        metadata:
+          readOnly: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - action
+      - action_display
+      - created_at
+      - description
+      - id
+      - ip_address
+      - metadata
+      - user
+      - user_email
+      - user_name
+    BackupCode:
+      type: object
+      description: Serializer for backup code information (without the actual code).
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        used:
+          type: boolean
+          readOnly: true
+        used_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - created_at
+      - id
+      - used
+      - used_at
+    DashboardStats:
+      type: object
+      description: Serializer for dashboard statistics.
+      properties:
+        users:
+          type: object
+          additionalProperties: {}
+        organizations:
+          type: object
+          additionalProperties: {}
+        subscriptions:
+          type: object
+          additionalProperties: {}
+        revenue:
+          type: object
+          additionalProperties: {}
+      required:
+      - organizations
+      - revenue
+      - subscriptions
+      - users
+    Invitation:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        email:
+          type: string
+          format: email
+          maxLength: 254
+        role:
+          $ref: '#/components/schemas/RoleEnum'
+        status:
+          allOf:
+          - $ref: '#/components/schemas/StatusEnum'
+          readOnly: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        expires_at:
+          type: string
+          format: date-time
+          readOnly: true
+        invited_by_email:
+          type: string
+          format: email
+          readOnly: true
+      required:
+      - created_at
+      - email
+      - expires_at
+      - id
+      - invited_by_email
+      - status
+    Login:
+      type: object
+      properties:
+        email:
+          type: string
+          format: email
+      required:
+      - email
+    LoginRequest:
+      type: object
+      properties:
+        email:
+          type: string
+          format: email
+          minLength: 1
+        password:
+          type: string
+          writeOnly: true
+          minLength: 1
+      required:
+      - email
+      - password
+    Membership:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        user:
+          type: string
+          format: uuid
+          readOnly: true
+        user_email:
+          type: string
+          format: email
+          readOnly: true
+        user_full_name:
+          type: string
+          readOnly: true
+        user_avatar:
+          type: string
+          format: uri
+          readOnly: true
+        role:
+          $ref: '#/components/schemas/RoleEnum'
+        is_active:
+          type: boolean
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - created_at
+      - id
+      - user
+      - user_avatar
+      - user_email
+      - user_full_name
+    MembershipRequest:
+      type: object
+      properties:
+        role:
+          $ref: '#/components/schemas/RoleEnum'
+        is_active:
+          type: boolean
+    OAuthAuthorizationUrl:
+      type: object
+      description: Serializer for OAuth authorization URL response.
+      properties:
+        authorization_url:
+          type: string
+          format: uri
+        callback_url:
+          type: string
+          format: uri
+      required:
+      - authorization_url
+      - callback_url
+    OAuthCallback:
+      type: object
+      description: Serializer for OAuth callback response.
+      properties:
+        message:
+          type: string
+        provider:
+          type: string
+        code:
+          type: string
+        note:
+          type: string
+      required:
+      - code
+      - message
+      - note
+      - provider
+    OAuthProvider:
+      type: object
+      description: Serializer for available OAuth providers.
+      properties:
+        provider:
+          type: string
+        name:
+          type: string
+        connected:
+          type: boolean
+        authorization_url:
+          type: string
+          format: uri
+      required:
+      - connected
+      - name
+      - provider
+    OAuthProviderList:
+      type: object
+      description: Serializer for a list of OAuth providers.
+      properties:
+        providers:
+          type: array
+          items:
+            $ref: '#/components/schemas/OAuthProvider'
+      required:
+      - providers
+    Organization:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        name:
+          type: string
+          maxLength: 255
+        slug:
+          type: string
+          readOnly: true
+          pattern: ^[-a-zA-Z0-9_]+$
+        logo_url:
+          type: string
+          format: uri
+          maxLength: 200
+        role:
+          type: string
+          readOnly: true
+        member_count:
+          type: string
+          readOnly: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - created_at
+      - id
+      - member_count
+      - name
+      - role
+      - slug
+    OrganizationRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 255
+        logo_url:
+          type: string
+          format: uri
+          maxLength: 200
+      required:
+      - name
+    PaginatedActivityLogList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/ActivityLog'
+    PaginatedOrganizationList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/Organization'
+    PaginatedUserSessionList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/UserSession'
+    PasswordChangeRequest:
+      type: object
+      properties:
+        old_password:
+          type: string
+          writeOnly: true
+          minLength: 1
+        new_password:
+          type: string
+          writeOnly: true
+          minLength: 10
+      required:
+      - new_password
+      - old_password
+    PasswordConfirmationRequest:
+      type: object
+      description: Serializer for confirming action with password.
+      properties:
+        password:
+          type: string
+          writeOnly: true
+          minLength: 1
+      required:
+      - password
+    PasswordReset:
+      type: object
+      properties:
+        email:
+          type: string
+          format: email
+      required:
+      - email
+    PasswordResetConfirm:
+      type: object
+      properties:
+        token:
+          type: string
+        uid:
+          type: string
+      required:
+      - token
+      - uid
+    PasswordResetConfirmRequest:
+      type: object
+      properties:
+        new_password:
+          type: string
+          writeOnly: true
+          minLength: 10
+        token:
+          type: string
+          minLength: 1
+        uid:
+          type: string
+          minLength: 1
+      required:
+      - new_password
+      - token
+      - uid
+    PasswordResetRequest:
+      type: object
+      properties:
+        email:
+          type: string
+          format: email
+          minLength: 1
+      required:
+      - email
+    PatchedOrganizationRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 255
+        logo_url:
+          type: string
+          format: uri
+          maxLength: 200
+    RoleEnum:
+      enum:
+      - owner
+      - admin
+      - member
+      type: string
+      description: |-
+        * `owner` - Owner
+        * `admin` - Admin
+        * `member` - Member
+    Signup:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        email:
+          type: string
+          format: email
+          title: Email address
+          maxLength: 254
+        full_name:
+          type: string
+          maxLength: 255
+      required:
+      - email
+      - id
+    SignupRequest:
+      type: object
+      properties:
+        email:
+          type: string
+          format: email
+          minLength: 1
+          title: Email address
+          maxLength: 254
+        password:
+          type: string
+          writeOnly: true
+          minLength: 10
+        full_name:
+          type: string
+          maxLength: 255
+      required:
+      - email
+      - password
+    SocialAccount:
+      type: object
+      description: Serializer for connected social accounts.
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        provider:
+          type: string
+          readOnly: true
+        provider_name:
+          type: string
+          readOnly: true
+        uid:
+          type: string
+          readOnly: true
+        extra_data:
+          readOnly: true
+        date_joined:
+          type: string
+          format: date-time
+          readOnly: true
+        last_login:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - date_joined
+      - extra_data
+      - id
+      - last_login
+      - provider
+      - provider_name
+      - uid
+    SocialAccountList:
+      type: object
+      description: Serializer for a list of connected social accounts.
+      properties:
+        accounts:
+          type: array
+          items:
+            $ref: '#/components/schemas/SocialAccount'
+        total:
+          type: integer
+      required:
+      - accounts
+      - total
+    StatusEnum:
+      enum:
+      - pending
+      - accepted
+      - expired
+      - revoked
+      type: string
+      description: |-
+        * `pending` - Pending
+        * `accepted` - Accepted
+        * `expired` - Expired
+        * `revoked` - Revoked
+    TOTPDevice:
+      type: object
+      description: Serializer for TOTP device information.
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        name:
+          type: string
+          description: Device name
+          maxLength: 64
+        confirmed:
+          type: boolean
+          readOnly: true
+          description: Whether the device has been confirmed
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        last_used_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+        provisioning_uri:
+          type: string
+          readOnly: true
+      required:
+      - confirmed
+      - created_at
+      - id
+      - last_used_at
+      - provisioning_uri
+    TOTPEnableRequest:
+      type: object
+      description: Serializer for enabling TOTP after verification.
+      properties:
+        token:
+          type: string
+          minLength: 6
+          maxLength: 6
+      required:
+      - token
+    TOTPSetupRequest:
+      type: object
+      description: Serializer for initiating TOTP setup.
+      properties:
+        name:
+          type: string
+          minLength: 1
+          default: Default
+          maxLength: 64
+    UserSession:
+      type: object
+      description: Serializer for user sessions.
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        user:
+          type: string
+          format: uuid
+          readOnly: true
+        user_email:
+          type: string
+          readOnly: true
+        ip_address:
+          type: string
+          readOnly: true
+          nullable: true
+        started_at:
+          type: string
+          format: date-time
+          readOnly: true
+        last_activity:
+          type: string
+          format: date-time
+          readOnly: true
+        ended_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+        is_active:
+          type: boolean
+          readOnly: true
+        duration_seconds:
+          type: string
+          readOnly: true
+      required:
+      - duration_seconds
+      - ended_at
+      - id
+      - ip_address
+      - is_active
+      - last_activity
+      - started_at
+      - user
+      - user_email
+    VerifyEmail:
+      type: object
+      properties:
+        token:
+          type: string
+      required:
+      - token
+    VerifyEmailRequest:
+      type: object
+      properties:
+        token:
+          type: string
+          minLength: 1
+      required:
+      - token
+  securitySchemes:
+    cookieAuth:
+      type: apiKey
+      in: cookie
+      name: sessionid

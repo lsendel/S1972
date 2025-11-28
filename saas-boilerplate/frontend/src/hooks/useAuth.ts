@@ -1,21 +1,24 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { auth } from '../api/auth';
-import { LoginCredentials, SignupData } from '../types/auth';
+import type { LoginCredentials, SignupData, User } from '../types/auth';
 
 export function useAuth() {
     const queryClient = useQueryClient();
 
-    const { data: user, isLoading, error } = useQuery({
+    const { data: user, isLoading, error } = useQuery<User>({
         queryKey: ['auth', 'me'],
-        queryFn: () => auth.me(),
+        queryFn: async () => {
+            const response = await auth.me();
+            return response as unknown as User;
+        },
         retry: false,
         staleTime: 5 * 60 * 1000, // 5 minutes
     });
 
     const loginMutation = useMutation({
         mutationFn: (credentials: LoginCredentials) => auth.login(credentials),
-        onSuccess: () => {
-            queryClient.invalidateQueries({ queryKey: ['auth', 'me'] });
+        onSuccess: async () => {
+            await queryClient.invalidateQueries({ queryKey: ['auth', 'me'] });
         },
     });
 

@@ -17,11 +17,13 @@ urlpatterns = [
     path('api/redoc/', SpectacularRedocView.as_view(url_name='schema'), name='redoc'),
 
     # API Endpoints
+    path('', include('apps.core.urls')),
     path('api/v1/auth/', include('apps.authentication.urls')),
     path('api/v1/accounts/', include('apps.accounts.urls')),
     path('api/v1/organizations/', include('apps.organizations.urls')),
     path('api/v1/subscriptions/', include('apps.subscriptions.urls')),
-    path('api/v1/admin/', include('apps.analytics.urls')),
+    path('api/v1/analytics/', include('apps.analytics.urls')),
+    path('api/v1/notifications/', include('apps.notifications.urls')),
 ]
 
 if settings.DEBUG:

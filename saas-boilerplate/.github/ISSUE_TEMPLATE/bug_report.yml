@@ -1,0 +1,174 @@
+name: 🐛 Bug Report
+description: Report a bug or unexpected behavior
+title: "[Bug]: "
+labels: ["bug", "needs-triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to report a bug! Please fill out this form as completely as possible.
+
+  - type: checkboxes
+    id: preflight
+    attributes:
+      label: Preflight Checklist
+      description: Please ensure you've completed all of the following.
+      options:
+        - label: I have searched the [existing issues](../issues) to ensure this bug has not already been reported.
+          required: true
+        - label: I am using the latest version of the application.
+          required: true
+        - label: I have read the [documentation](../../CI_CD.md).
+          required: true
+
+  - type: textarea
+    id: description
+    attributes:
+      label: Bug Description
+      description: A clear and concise description of what the bug is.
+      placeholder: When I try to..., the application...
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected Behavior
+      description: What did you expect to happen?
+      placeholder: I expected...
+    validations:
+      required: true
+
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual Behavior
+      description: What actually happened?
+      placeholder: Instead...
+    validations:
+      required: true
+
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to Reproduce
+      description: Detailed steps to reproduce the behavior.
+      placeholder: |
+        1. Go to '...'
+        2. Click on '...'
+        3. Scroll down to '...'
+        4. See error
+    validations:
+      required: true
+
+  - type: dropdown
+    id: environment
+    attributes:
+      label: Environment
+      description: Where did this bug occur?
+      options:
+        - Production
+        - Staging
+        - Local Development
+        - CI/CD Pipeline
+      multiple: true
+    validations:
+      required: true
+
+  - type: dropdown
+    id: area
+    attributes:
+      label: Affected Area
+      description: Which part of the application is affected?
+      options:
+        - Backend API
+        - Frontend UI
+        - Database
+        - Authentication
+        - Subscriptions/Billing
+        - Organizations/Multi-tenancy
+        - CI/CD Pipeline
+        - Deployment
+        - Other
+    validations:
+      required: true
+
+  - type: dropdown
+    id: severity
+    attributes:
+      label: Severity
+      description: How severe is this bug?
+      options:
+        - 🔴 Critical - Service down or data loss
+        - 🟠 High - Major feature broken
+        - 🟡 Medium - Minor feature broken
+        - 🟢 Low - Cosmetic issue
+    validations:
+      required: true
+
+  - type: input
+    id: version
+    attributes:
+      label: Application Version
+      description: What version of the application are you using?
+      placeholder: v1.2.3 or commit SHA
+    validations:
+      required: true
+
+  - type: textarea
+    id: system-info
+    attributes:
+      label: System Information
+      description: Please provide relevant system information
+      placeholder: |
+        - OS: [e.g., Ubuntu 22.04, macOS 14.0, Windows 11]
+        - Browser: [e.g., Chrome 120, Firefox 121, Safari 17]
+        - Python version: [e.g., 3.12]
+        - Node version: [e.g., 20.10]
+        - Docker version: [e.g., 24.0.7]
+    validations:
+      required: false
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Relevant Log Output
+      description: Please copy and paste any relevant log output. This will be automatically formatted.
+      render: shell
+    validations:
+      required: false
+
+  - type: textarea
+    id: screenshots
+    attributes:
+      label: Screenshots / Videos
+      description: If applicable, add screenshots or videos to help explain the problem.
+      placeholder: Drag and drop images/videos here or paste URLs
+    validations:
+      required: false
+
+  - type: textarea
+    id: additional
+    attributes:
+      label: Additional Context
+      description: Add any other context about the problem here.
+      placeholder: |
+        - This started happening after...
+        - It only happens when...
+        - I've tried...
+    validations:
+      required: false
+
+  - type: checkboxes
+    id: workaround
+    attributes:
+      label: Is there a workaround?
+      options:
+        - label: I have found a workaround (please describe in Additional Context)
+
+  - type: checkboxes
+    id: contribution
+    attributes:
+      label: Are you willing to contribute a fix?
+      options:
+        - label: Yes, I am willing to submit a pull request to fix this bug

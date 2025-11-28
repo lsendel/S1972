@@ -41,3 +41,10 @@ class PasswordResetConfirmSerializer(serializers.Serializer):
     new_password = serializers.CharField(write_only=True, min_length=10)
     token = serializers.CharField()
     uid = serializers.CharField()
+
+class VerifyEmailSerializer(serializers.Serializer):
+    token = serializers.CharField()
+
+class PasswordChangeSerializer(serializers.Serializer):
+    old_password = serializers.CharField(write_only=True)
+    new_password = serializers.CharField(write_only=True, min_length=10)

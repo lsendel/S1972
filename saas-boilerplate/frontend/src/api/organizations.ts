@@ -1,13 +1,7 @@
-import client from './client';
+import { api } from './config';
+import { Organization, PatchedOrganizationRequest } from './generated';
 
-export interface Organization {
-  id: string;
-  name: string;
-  slug: string;
-  logo_url: string;
-  role: 'owner' | 'admin' | 'member';
-  created_at: string;
-}
+export type { Organization };
 
 export interface CreateOrganizationData {
   name: string;
@@ -16,18 +10,21 @@ export interface CreateOrganizationData {
 
 export const organizationsApi = {
   // List user's organizations
-  list: () => client.get<Organization[]>('/organizations/'),
+  list: async () => {
+    const response = await api.organizations.organizationsList({});
+    return { data: response.results }; // Wrap to match expected structure if needed, or update callers
+  },
 
   // Get specific organization
-  get: (slug: string) => client.get<Organization>(`/organizations/${slug}/`),
+  get: (slug: string) => api.organizations.organizationsRetrieve({ slug }).then(data => ({ data })),
 
   // Create new organization
-  create: (data: CreateOrganizationData) => client.post<Organization>('/organizations/', data),
+  create: (data: CreateOrganizationData) => api.organizations.organizationsCreate({ requestBody: data }).then(data => ({ data })),
 
   // Update organization
-  update: (slug: string, data: Partial<CreateOrganizationData>) =>
-    client.patch<Organization>(`/organizations/${slug}/`, data),
+  update: (slug: string, data: PatchedOrganizationRequest) =>
+    api.organizations.organizationsPartialUpdate({ slug, requestBody: data }).then(data => ({ data })),
 
   // Delete organization
-  delete: (slug: string) => client.delete(`/organizations/${slug}/`),
+  delete: (slug: string) => api.organizations.organizationsDestroy({ slug }),
 };

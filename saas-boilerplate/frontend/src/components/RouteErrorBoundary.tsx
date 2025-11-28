@@ -1,15 +1,23 @@
-import React from 'react'
 import { useRouteError, isRouteErrorResponse, useNavigate } from 'react-router-dom'
 import { Button } from './ui/button'
 
 export default function RouteErrorBoundary() {
-  const error = useRouteError()
+  let error: unknown
+  try {
+    error = useRouteError()
+  } catch {
+    // BrowserRouter (non-data routers) does not support useRouteError; fall back to a generic 404
+    error = null
+  }
   const navigate = useNavigate()
 
   let errorMessage: string
   let errorStatus: number | undefined
 
-  if (isRouteErrorResponse(error)) {
+  if (error === null) {
+    errorStatus = 404
+    errorMessage = "The page you're looking for doesn't exist."
+  } else if (isRouteErrorResponse(error)) {
     errorStatus = error.status
     errorMessage = error.statusText || error.data?.message || 'An error occurred'
   } else if (error instanceof Error) {
@@ -19,7 +27,7 @@ export default function RouteErrorBoundary() {
   }
 
   const getErrorTitle = () => {
-    if (errorStatus === 404) return 'Page Not Found'
+    if (errorStatus === 404 || error === null) return 'Page Not Found'
     if (errorStatus === 403) return 'Access Denied'
     if (errorStatus === 500) return 'Server Error'
     return 'Oops! Something went wrong'

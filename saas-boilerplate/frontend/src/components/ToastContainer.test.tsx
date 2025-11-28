@@ -1,5 +1,5 @@
-import { describe, it, expect, vi } from 'vitest'
-import { render, screen, waitFor, act } from '@/test/utils'
+import { describe, it, expect } from 'vitest'
+import { render, screen, waitFor } from '@/test/utils'
 import userEvent from '@testing-library/user-event'
 import { ToastProvider, useToastContext } from './ToastContainer'
 

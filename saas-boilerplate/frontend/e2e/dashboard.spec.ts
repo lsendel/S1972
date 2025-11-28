@@ -14,7 +14,7 @@ test.describe('Dashboard and Organization Flow', () => {
       await page.goto(`/app/${orgSlug}`)
       await verifyPageLoaded(page)
 
-      await expect(page.getByRole('heading', { name: /welcome back/i })).toBeVisible()
+      await expect(page.getByRole('heading', { name: /dashboard/i })).toBeVisible()
       await expect(page.getByText(/team members/i)).toBeVisible()
       await expect(page.getByText(/your role/i)).toBeVisible()
     })
@@ -37,7 +37,7 @@ test.describe('Dashboard and Organization Flow', () => {
 
       await expect(page).toHaveURL(/\/settings\/profile/)
       await verifyPageLoaded(page)
-      await expect(page.getByRole('heading', { name: /profile settings/i })).toBeVisible()
+      await expect(page.getByRole('heading', { name: /profile/i })).toBeVisible()
     })
 
     test('should navigate to security settings', async ({ page }) => {
@@ -47,7 +47,7 @@ test.describe('Dashboard and Organization Flow', () => {
 
       await expect(page).toHaveURL(/\/settings\/security/)
       await verifyPageLoaded(page)
-      await expect(page.getByRole('heading', { name: /security settings/i })).toBeVisible()
+      await expect(page.getByRole('heading', { name: /security/i })).toBeVisible()
     })
 
     test('should navigate to team settings', async ({ page }) => {
@@ -57,7 +57,7 @@ test.describe('Dashboard and Organization Flow', () => {
 
       await expect(page).toHaveURL(/\/settings\/team/)
       await verifyPageLoaded(page)
-      await expect(page.getByRole('heading', { name: /team settings/i })).toBeVisible()
+      await expect(page.getByRole('heading', { name: /team members/i })).toBeVisible()
     })
 
     test('should navigate to billing settings', async ({ page }) => {
@@ -76,6 +76,11 @@ test.describe('Dashboard and Organization Flow', () => {
       await page.goto(`/app/${orgSlug}/settings/team`)
       await verifyPageLoaded(page)
 
+      // Open invite form
+      if (await page.getByRole('button', { name: /invite member/i }).isVisible()) {
+        await page.getByRole('button', { name: /invite member/i }).click()
+      }
+
       await expect(page.getByLabel(/email/i)).toBeVisible()
       await expect(page.getByRole('button', { name: /invite/i })).toBeVisible()
     })
@@ -84,7 +89,14 @@ test.describe('Dashboard and Organization Flow', () => {
       await page.goto(`/app/${orgSlug}/settings/team`)
       await verifyPageLoaded(page)
 
-      const emailInput = page.getByLabel(/email/i).first()
+      // Open invite form
+      if (await page.getByRole('button', { name: /invite member/i }).isVisible()) {
+        await page.getByRole('button', { name: /invite member/i }).click()
+      }
+
+      // Wait for the email input to be visible after form opens
+      const emailInput = page.getByLabel(/^email$/i)
+      await emailInput.waitFor({ state: 'visible', timeout: 5000 })
       await emailInput.fill('invalid-email')
 
       await page.getByRole('button', { name: /invite/i }).first().click()
@@ -101,21 +113,21 @@ test.describe('Dashboard and Organization Flow', () => {
 
       await expect(page.getByRole('heading', { name: /change password/i })).toBeVisible()
       await expect(page.getByLabel(/current password/i)).toBeVisible()
-      await expect(page.getByLabel(/new password/i)).toBeVisible()
+      await expect(page.getByLabel(/^new password$/i)).toBeVisible()
     })
 
     test('should show 2FA section', async ({ page }) => {
       await page.goto(`/app/${orgSlug}/settings/security`)
       await verifyPageLoaded(page)
 
-      await expect(page.getByRole('heading', { name: /two-factor authentication/i })).toBeVisible()
+      await expect(page.getByRole('heading', { name: /two-factor authentication/i }).first()).toBeVisible()
     })
 
     test('should show OAuth connections', async ({ page }) => {
       await page.goto(`/app/${orgSlug}/settings/security`)
       await verifyPageLoaded(page)
 
-      await expect(page.getByRole('heading', { name: /connected accounts/i })).toBeVisible()
+      await expect(page.getByRole('heading', { name: /connected accounts/i }).first()).toBeVisible()
     })
   })
 
@@ -124,7 +136,7 @@ test.describe('Dashboard and Organization Flow', () => {
       await page.goto('/this-route-does-not-exist')
       await verifyPageLoaded(page)
       
-      await expect(page.getByText(/404|not found/i)).toBeVisible()
+      await expect(page.getByRole('heading', { name: '404' })).toBeVisible()
     })
 
     test('should have go home button on error page', async ({ page }) => {

@@ -1,21 +1,18 @@
 import { useQuery, useMutation } from '@tanstack/react-query';
-import client from '../api/client';
+import { api } from '../api/config';
+import { Organization } from '../api/generated';
 
-export interface Organization {
-  id: string;
-  name: string;
-  slug: string;
-  logo_url: string | null;
-  role: 'owner' | 'admin' | 'member';
-  member_count: number;
-}
+export type { Organization };
 
 export function useOrganizations() {
   return useQuery({
     queryKey: ['organizations'],
     queryFn: async () => {
-      const response = await client.get<Organization[]>('/organizations/');
-      return response;
+      const response = await api.organizations.organizationsList({});
+      if (response.results) {
+        return response.results;
+      }
+      return [];
     },
   });
 }
@@ -25,7 +22,7 @@ export function useOrganization(slug?: string) {
     queryKey: ['organizations', slug],
     queryFn: async () => {
       if (!slug) return null;
-      const response = await client.get<Organization>(`/organizations/${slug}/`);
+      const response = await api.organizations.organizationsRetrieve({ slug });
       return response;
     },
     enabled: !!slug,
@@ -34,8 +31,10 @@ export function useOrganization(slug?: string) {
 
 export function useCreateOrganization() {
   return useMutation({
-    mutationFn: async (data: { name: string }) => {
-      const response = await client.post<Organization>('/organizations/', data);
+    mutationFn: async (data: { name: string; slug?: string }) => {
+      const response = await api.organizations.organizationsCreate({
+        requestBody: { name: data.name }
+      });
       return response;
     },
   });

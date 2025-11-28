@@ -27,7 +27,11 @@ class OrganizationViewSet(viewsets.ModelViewSet):
         ).order_by('-created_at')
 
     def perform_create(self, serializer):
-        org = serializer.save(slug=uuid.uuid4().hex[:12]) # Simple slug generation
+        # Use provided slug if available, otherwise generate one
+        slug = serializer.validated_data.get('slug')
+        if not slug:
+            slug = uuid.uuid4().hex[:12]
+        org = serializer.save(slug=slug)
         Membership.objects.create(
             user=self.request.user,
             organization=org,
@@ -66,17 +70,16 @@ class MemberViewSet(viewsets.ReadOnlyModelViewSet):
             return Response({"detail": "User is already a member"}, status=status.HTTP_400_BAD_REQUEST)
 
         # Create invitation
-        invitation = Invitation.objects.create(
+        invitation, token = Invitation.create_invitation(
             organization=org,
             email=email,
             role=role,
             invited_by=request.user,
-            token=uuid.uuid4().hex,
             expires_at=timezone.now() + timezone.timedelta(days=7)
         )
 
         # Send email
-        accept_url = f"{settings.FRONTEND_URL}/invitations/{invitation.token}"
+        accept_url = f"{settings.FRONTEND_URL}/invitations/{token}"
         send_email_task.delay(
             subject=f"You've been invited to join {org.name}",
             recipient_list=[email],

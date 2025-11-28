@@ -1,0 +1,113 @@
+name: Migration Check
+
+on:
+  pull_request:
+    paths:
+      - 'backend/apps/**/models.py'
+      - 'backend/apps/**/migrations/**'
+      - 'backend/config/settings/**'
+      - '.github/workflows/migration-check.yml'
+
+env:
+  CI: true
+
+permissions:
+  contents: read
+
+jobs:
+  check-migrations:
+    name: Check for Missing Migrations
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      pull-requests: write  # For PR comments
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Fetch all history for comparison
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: 'pip'
+          cache-dependency-path: backend/pyproject.toml
+
+      - name: Install dependencies
+        working-directory: ./backend
+        run: |
+          pip install -e .
+          pip install -e .[dev]
+
+      - name: Check for missing migrations
+        id: migration-check
+        working-directory: ./backend
+        env:
+          DJANGO_SETTINGS_MODULE: config.settings.development
+          DJANGO_SECRET_KEY: test-secret-key-for-ci-minimum-50-characters-long
+          DATABASE_URL: sqlite:///test.db
+        run: |
+          python manage.py makemigrations --check --dry-run --noinput
+        continue-on-error: true
+
+      - name: Generate migration preview
+        if: steps.migration-check.outcome == 'failure'
+        working-directory: ./backend
+        env:
+          DJANGO_SETTINGS_MODULE: config.settings.development
+          DJANGO_SECRET_KEY: test-secret-key-for-ci-minimum-50-characters-long
+          DATABASE_URL: sqlite:///test.db
+        run: |
+          echo "## Missing Migrations Detected" > migration-report.txt
+          echo "" >> migration-report.txt
+          echo "The following migrations need to be created:" >> migration-report.txt
+          echo "" >> migration-report.txt
+          python manage.py makemigrations --dry-run --verbosity 2 >> migration-report.txt 2>&1 || true
+          echo "" >> migration-report.txt
+          echo "---" >> migration-report.txt
+          echo "Please run \`make makemigrations\` locally and commit the generated migration files." >> migration-report.txt
+
+      - name: Comment PR with migration issues
+        if: steps.migration-check.outcome == 'failure'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const report = fs.readFileSync('./backend/migration-report.txt', 'utf8');
+
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: `⚠️ **Migration Check Failed**\n\n\`\`\`\n${report}\n\`\`\``
+            });
+
+      - name: Fail job if migrations missing
+        if: steps.migration-check.outcome == 'failure'
+        run: |
+          echo "❌ Missing migrations detected. Please create and commit them."
+          exit 1
+
+      - name: Check for conflicting migrations
+        working-directory: ./backend
+        run: |
+          # Check for multiple migration files with same number in each app
+          for app in apps/*/migrations; do
+            if [ -d "$app" ]; then
+              duplicates=$(ls $app/*.py 2>/dev/null | grep -E '[0-9]{4}_' | sed 's/.*\/\([0-9]\{4\}\).*/\1/' | sort | uniq -d)
+              if [ ! -z "$duplicates" ]; then
+                echo "❌ Found conflicting migration numbers in $app:"
+                echo "$duplicates"
+                exit 1
+              fi
+            fi
+          done
+          echo "✅ No conflicting migrations found"
+
+      - name: Success summary
+        if: steps.migration-check.outcome == 'success'
+        run: |
+          echo "✅ All migrations are up to date"
+          echo "✅ No conflicting migrations detected"

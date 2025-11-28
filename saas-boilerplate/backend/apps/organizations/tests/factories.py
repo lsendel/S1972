@@ -1,6 +1,9 @@
 import factory
+from datetime import timedelta
+from django.utils import timezone
 from apps.organizations.models import Organization, Membership, Invitation
 from apps.accounts.tests.factories import UserFactory
+
 
 class OrganizationFactory(factory.django.DjangoModelFactory):
     class Meta:
@@ -8,6 +11,7 @@ class OrganizationFactory(factory.django.DjangoModelFactory):
 
     name = factory.Faker('company')
     slug = factory.Faker('slug')
+
 
 class MembershipFactory(factory.django.DjangoModelFactory):
     class Meta:
@@ -17,6 +21,7 @@ class MembershipFactory(factory.django.DjangoModelFactory):
     organization = factory.SubFactory(OrganizationFactory)
     role = 'member'
 
+
 class InvitationFactory(factory.django.DjangoModelFactory):
     class Meta:
         model = Invitation
@@ -25,3 +30,5 @@ class InvitationFactory(factory.django.DjangoModelFactory):
     email = factory.Faker('email')
     invited_by = factory.SubFactory(UserFactory)
     role = 'member'
+    expires_at = factory.LazyFunction(lambda: timezone.now() + timedelta(days=7))
+    token_hash = factory.Faker('sha256')

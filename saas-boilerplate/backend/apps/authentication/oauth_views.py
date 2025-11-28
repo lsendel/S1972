@@ -8,9 +8,15 @@ from allauth.socialaccount.providers.github.views import GitHubOAuth2Adapter
 from allauth.socialaccount.providers.oauth2.client import OAuth2Client
 from django.conf import settings
 from django.contrib.sites.models import Site
-from .oauth_serializers import SocialAccountSerializer, OAuthProviderSerializer
+from drf_spectacular.utils import extend_schema
+from .oauth_serializers import (
+    SocialAccountSerializer, OAuthProviderSerializer,
+    OAuthAuthorizationUrlSerializer, OAuthCallbackSerializer,
+    OAuthProviderListSerializer, SocialAccountListSerializer
+)
 
 
+@extend_schema(responses=SocialAccountListSerializer)
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def oauth_connected_accounts(request):
@@ -24,6 +30,7 @@ def oauth_connected_accounts(request):
     })
 
 
+@extend_schema(responses=OAuthProviderListSerializer)
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def oauth_available_providers(request):
@@ -55,6 +62,7 @@ def oauth_available_providers(request):
     return Response({'providers': serializer.data})
 
 
+@extend_schema(responses=OAuthAuthorizationUrlSerializer)
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def oauth_authorization_url(request, provider):
@@ -105,6 +113,7 @@ def oauth_authorization_url(request, provider):
     })
 
 
+@extend_schema(responses={200: None})
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def oauth_disconnect(request, provider):
@@ -137,6 +146,7 @@ def oauth_disconnect(request, provider):
     })
 
 
+@extend_schema(responses=OAuthCallbackSerializer)
 @api_view(['GET'])
 def oauth_callback(request, provider):
     """

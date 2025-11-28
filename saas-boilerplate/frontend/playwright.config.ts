@@ -18,24 +18,59 @@ dotenv.config({ path: path.resolve(__dirname, '.env.e2e') })
  */
 export default defineConfig({
   testDir: './e2e',
+
   /* Run tests in files in parallel */
   fullyParallel: true,
+
   /* Fail the build on CI if you accidentally left test.only in the source code. */
   forbidOnly: !!process.env.CI,
-  /* Retry on CI only */
+
+  /* Retry failed tests on CI for stability */
   retries: process.env.CI ? 2 : 0,
-  /* Opt out of parallel tests on CI. */
-  workers: process.env.CI ? 1 : undefined,
-  /* Reporter to use. See https://playwright.dev/docs/test-reporters */
-  reporter: 'html',
+
+  /* Worker configuration for parallel execution */
+  workers: process.env.CI ? 2 : undefined,
+
+  /* Maximum time one test can run for */
+  timeout: 30 * 1000,
+
+  /* Test expectations timeout */
+  expect: {
+    timeout: 5 * 1000,
+  },
+
+  /* Reporter configuration - use multiple reporters on CI */
+  reporter: process.env.CI
+    ? [
+        ['html', { outputFolder: 'playwright-report' }],
+        ['json', { outputFile: 'test-results/results.json' }],
+        ['junit', { outputFile: 'test-results/junit.xml' }],
+        ['github'],
+        ['list'],
+      ]
+    : [['html', { open: 'never' }], ['list']],
+
+  /* Global test setup/teardown */
+  globalSetup: path.resolve(__dirname, './e2e/setup/global-setup.ts'),
+  globalTeardown: undefined,
+
   /* Shared settings for all the projects below. See https://playwright.dev/docs/api/class-testoptions. */
   use: {
     /* Base URL to use in actions like `await page.goto('/')`. */
     baseURL: 'http://localhost:5173',
-    /* Collect trace when retrying the failed test. See https://playwright.dev/docs/trace-viewer */
-    trace: 'on-first-retry',
-    /* Screenshot on failure */
+
+    /* Collect trace on first retry and on failure for debugging */
+    trace: process.env.CI ? 'on-first-retry' : 'retain-on-failure',
+
+    /* Screenshot on failure for debugging */
     screenshot: 'only-on-failure',
+
+    /* Video capture on retry and failure */
+    video: process.env.CI ? 'retain-on-failure' : 'off',
+
+    /* Action and navigation timeouts */
+    actionTimeout: 10 * 1000,
+    navigationTimeout: 30 * 1000,
   },
 
   /* Configure projects for major browsers */
@@ -74,5 +109,8 @@ export default defineConfig({
         command: 'npm run dev -- --host 127.0.0.1 --port 5173',
         url: 'http://localhost:5173',
         reuseExistingServer: !process.env.CI,
+        env: {
+          VITE_USE_MSW: 'true',
+        },
       },
 })

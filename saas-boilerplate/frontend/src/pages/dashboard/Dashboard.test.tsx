@@ -1,5 +1,5 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render, screen, waitFor } from '@/test/utils'
+import { describe, it, expect, vi } from 'vitest'
+import { render, screen } from '@/test/utils'
 import { mockOrganization, mockUser } from '@/test/utils'
 import Dashboard from './Dashboard'
 
@@ -57,7 +57,7 @@ describe('Dashboard Page', () => {
 
   it('shows number of organizations', () => {
     render(<Dashboard />)
-    expect(screen.getByText(/organizations/i)).toBeInTheDocument()
+    expect(screen.getAllByText(/organizations/i)[0]).toBeInTheDocument()
     expect(screen.getByText('1')).toBeInTheDocument()
   })
 })

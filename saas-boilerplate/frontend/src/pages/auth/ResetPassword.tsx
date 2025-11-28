@@ -1,30 +1,42 @@
-import React, { useState } from "react"
+import { useState } from "react"
 import { useForm } from "react-hook-form"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Link, useParams, useNavigate } from "react-router-dom"
-import client from "@/api/client"
+import { api } from "@/api/config"
+
+import type { ApiError } from "@/api/generated"
+
+interface FormData {
+  password: string
+  confirmPassword?: string
+}
 
 export default function ResetPassword() {
-  const { token } = useParams<{ token: string }>()
+  const { uid, token } = useParams<{ uid: string; token: string }>()
   const navigate = useNavigate()
-  const { register, handleSubmit, watch, formState: { errors, isSubmitting } } = useForm()
+  const { register, handleSubmit, watch, formState: { errors, isSubmitting } } = useForm<FormData>()
   const [error, setError] = useState<string | null>(null)
 
   const password = watch("password")
 
-  const onSubmit = async (data: any) => {
+  const onSubmit = async (data: FormData) => {
     try {
       setError(null)
-      await client.post('/auth/password/reset/confirm/', {
-        token,
-        password: data.password
+      await api.auth.authPasswordResetConfirmCreate({
+        requestBody: {
+          token: token ?? '',
+          uid: uid ?? '',
+          new_password: data.password
+        }
       })
 
       // Redirect to login with success message
       navigate('/login?reset=success')
-    } catch (err: any) {
-      setError(err?.error || "Failed to reset password. The link may have expired.")
+    } catch (err) {
+      const apiError = err as ApiError
+      const body = apiError.body as { error?: string }
+      setError(body?.error ?? "Failed to reset password. The link may have expired.")
     }
   }
 
@@ -46,7 +58,7 @@ export default function ResetPassword() {
           </div>
         )}
 
-        <form className="mt-8 space-y-6" onSubmit={handleSubmit(onSubmit)}>
+        <form className="mt-8 space-y-6" onSubmit={(e) => void handleSubmit(onSubmit)(e)}>
           <div>
             <Input
               {...register("password", {
@@ -58,7 +70,7 @@ export default function ResetPassword() {
               autoComplete="new-password"
             />
             {errors.password && (
-              <span className="text-sm text-red-500">{errors.password.message as string}</span>
+              <span className="text-sm text-red-500">{errors.password.message!}</span>
             )}
           </div>
 
@@ -73,7 +85,7 @@ export default function ResetPassword() {
               autoComplete="new-password"
             />
             {errors.confirmPassword && (
-              <span className="text-sm text-red-500">{errors.confirmPassword.message as string}</span>
+              <span className="text-sm text-red-500">{errors.confirmPassword.message!}</span>
             )}
           </div>
 

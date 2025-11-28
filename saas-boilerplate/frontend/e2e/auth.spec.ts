@@ -6,7 +6,7 @@ test.describe('Authentication Flow', () => {
     await page.goto('/')
   })
 
-  test('should redirect to login page from root', async ({ page }) => {
+  test('@quick should redirect to login page from root', async ({ page }) => {
     await expect(page).toHaveURL(/\/login/)
     await verifyPageLoaded(page)
     await expect(page.getByRole('heading', { name: /login/i })).toBeVisible()
@@ -24,7 +24,7 @@ test.describe('Authentication Flow', () => {
     await expect(emailInput).toHaveAttribute('required')
   })
 
-  test('should navigate to signup page', async ({ page }) => {
+  test('@quick should navigate to signup page', async ({ page }) => {
     await page.goto('/login')
     await verifyPageLoaded(page)
 
@@ -63,8 +63,8 @@ test.describe('Authentication Flow', () => {
     await page.getByLabel(/^password$/i).fill('wrongpassword')
     await page.getByRole('button', { name: /sign in/i }).click()
 
-    // Wait for error message (adjust selector based on your actual error handling)
-    await expect(page.locator('text=/unable to log in|failed/i')).toBeVisible({ timeout: 5000 })
+    // Wait for error message - backend returns "Invalid credentials" for failed login
+    await expect(page.getByText(/invalid credentials|unable to log in|failed to login/i)).toBeVisible({ timeout: 5000 })
   })
 
   test.describe('Signup Flow', () => {
@@ -80,16 +80,11 @@ test.describe('Authentication Flow', () => {
     test('should validate password requirements', async ({ page }) => {
       await page.goto('/signup')
       await verifyPageLoaded(page)
-      
-      await page.getByLabel(/full name/i).fill('Test User')
-      await page.getByLabel(/email/i).fill('test@example.com')
-      await page.getByLabel(/^password$/i).fill('short')
-      
-      await page.getByRole('button', { name: /sign up/i }).click()
-      
-      // Should show validation error for password length
+
       const passwordInput = page.getByLabel(/^password$/i)
-      await expect(passwordInput).toHaveAttribute('minlength')
+
+      // Check that password input has minlength attribute set to 10
+      await expect(passwordInput).toHaveAttribute('minlength', '10')
     })
   })
 

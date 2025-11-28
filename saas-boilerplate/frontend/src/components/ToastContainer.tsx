@@ -1,5 +1,5 @@
-import React, { createContext, useContext, ReactNode } from 'react'
-import { useToast, Toast as ToastType } from '@/hooks/useToast'
+import { createContext, useContext, ReactNode } from 'react'
+import { useToast } from '@/hooks/useToast'
 import { Toast } from './ui/toast'
 
 interface ToastContextType {
@@ -30,7 +30,7 @@ export function ToastProvider({ children }: ToastProviderProps) {
   return (
     <ToastContext.Provider value={{ success, error, warning, info, removeToast }}>
       {children}
-      
+
       {/* Toast Container */}
       <div
         aria-live="assertive"

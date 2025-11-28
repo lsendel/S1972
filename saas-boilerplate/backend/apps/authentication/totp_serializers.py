@@ -59,3 +59,8 @@ class BackupCodeVerifySerializer(serializers.Serializer):
         if len(cleaned) != 8:
             raise serializers.ValidationError("Backup code must be 8 characters")
         return value
+
+
+class PasswordConfirmationSerializer(serializers.Serializer):
+    """Serializer for confirming action with password."""
+    password = serializers.CharField(write_only=True)

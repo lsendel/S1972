@@ -1,64 +1,57 @@
-import React from "react"
+
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 import { Button } from "@/components/ui/button"
-import client from "@/api/client"
+import { api } from "@/api/config"
+import type { ApiError } from "@/api/generated"
+import { useToast } from "@/hooks/useToast"
 
-interface OAuthProvider {
-  provider: string
-  name: string
-  connected: boolean
-}
 
-interface ConnectedAccount {
-  id: string
-  provider: string
-  provider_name: string
-  email?: string
-  name?: string
-  picture?: string
-  avatar_url?: string
-  login?: string
-  date_joined: string
-}
 
 export default function OAuthConnections() {
   const queryClient = useQueryClient()
+  const { error } = useToast()
 
-  const { data: providers, isLoading: providersLoading } = useQuery<{ providers: OAuthProvider[] }>({
+  const { data: providersData, isLoading: providersLoading } = useQuery({
     queryKey: ['oauth', 'providers'],
-    queryFn: () => client.get('/auth/oauth/providers/'),
+    queryFn: () => api.auth.authOauthProvidersRetrieve(),
   })
 
-  const { data: accounts } = useQuery<{ accounts: ConnectedAccount[] }>({
+  const { data: accountsData } = useQuery({
     queryKey: ['oauth', 'accounts'],
-    queryFn: () => client.get('/auth/oauth/accounts/'),
+    queryFn: () => api.auth.authOauthAccountsRetrieve(),
   })
+
+  const providers = providersData?.providers ?? []
+  const accounts = accountsData?.accounts ?? []
 
   const disconnectMutation = useMutation({
-    mutationFn: (provider: string) => client.post(`/auth/oauth/disconnect/${provider}/`),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['oauth', 'providers'] })
-      queryClient.invalidateQueries({ queryKey: ['oauth', 'accounts'] })
+    mutationFn: (provider: string) => api.auth.authOauthDisconnectCreate({ provider }),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ['oauth', 'providers'] })
+      await queryClient.invalidateQueries({ queryKey: ['oauth', 'accounts'] })
     },
-    onError: (error: any) => {
-      alert(error?.error || 'Failed to disconnect account')
+    onError: (err: ApiError) => {
+      const body = err.body as { error?: string }
+      error(body?.error ?? 'Failed to disconnect account')
     },
   })
 
   const handleConnect = async (provider: string) => {
     try {
-      const response = await client.get<{ authorization_url: string }>(`/auth/oauth/authorize/${provider}/`)
+      const response = await api.auth.authOauthAuthorizeRetrieve({ provider })
       if (response.authorization_url) {
         // Redirect to OAuth provider
         window.location.href = response.authorization_url
       }
-    } catch (error: any) {
-      alert(error?.error || 'Failed to initiate OAuth connection')
+    } catch (err) {
+      const apiError = err as ApiError
+      const body = apiError.body as { error?: string }
+      error(body?.error ?? 'Failed to initiate OAuth connection')
     }
   }
 
   const handleDisconnect = (provider: string) => {
-    if (window.confirm(`Are you sure you want to disconnect your ${provider} account?`)) {
+    if (window.confirm(`Are you sure you want to disconnect your ${provider} account ? `)) {
       disconnectMutation.mutate(provider)
     }
   }
@@ -102,7 +95,7 @@ export default function OAuthConnections() {
   }
 
   const getConnectedAccount = (provider: string) => {
-    return accounts?.accounts.find(acc => acc.provider === provider)
+    return accounts.find(acc => acc.provider === provider)
   }
 
   if (providersLoading) {
@@ -118,7 +111,7 @@ export default function OAuthConnections() {
         </p>
 
         <div className="space-y-4">
-          {providers?.providers?.map((provider) => {
+          {providers.map((provider) => {
             const connectedAccount = getConnectedAccount(provider.provider)
             const isConnected = provider.connected
 
@@ -135,8 +128,8 @@ export default function OAuthConnections() {
                     <h3 className="font-semibold">{provider.name}</h3>
                     {isConnected && connectedAccount ? (
                       <div className="text-sm text-gray-600">
-                        {connectedAccount.email || connectedAccount.login}
-                        {connectedAccount.name && ` (${connectedAccount.name})`}
+                        {(connectedAccount.extra_data as { email?: string })?.email ?? connectedAccount.uid}
+                        {(connectedAccount.extra_data as { name?: string })?.name && ` (${(connectedAccount.extra_data as { name?: string }).name})`}
                       </div>
                     ) : (
                       <div className="text-sm text-gray-500">Not connected</div>
@@ -166,7 +159,7 @@ export default function OAuthConnections() {
                     <Button
                       variant="outline"
                       size="sm"
-                      onClick={() => handleConnect(provider.provider)}
+                      onClick={() => void handleConnect(provider.provider)}
                     >
                       Connect
                     </Button>
@@ -176,7 +169,7 @@ export default function OAuthConnections() {
             )
           })}
 
-          {providers?.providers?.length === 0 && (
+          {providers.length === 0 && (
             <div className="text-center py-8 text-gray-500">
               No OAuth providers configured. Please add OAuth credentials to your environment variables.
             </div>
@@ -184,7 +177,7 @@ export default function OAuthConnections() {
         </div>
       </div>
 
-      {accounts && accounts.accounts.length > 0 && (
+      {accounts.length > 0 && (
         <div className="text-sm text-gray-500 mt-4">
           <p>
             <strong>Note:</strong> You can disconnect OAuth accounts only if you have set a password or have

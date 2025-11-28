@@ -1,0 +1,224 @@
+name: 🔧 CI/CD Issue
+description: Report an issue with CI/CD pipeline, workflows, or deployments
+title: "[CI/CD]: "
+labels: ["ci-cd", "needs-triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for reporting a CI/CD issue! This helps us improve our automation.
+
+  - type: checkboxes
+    id: preflight
+    attributes:
+      label: Preflight Checklist
+      description: Please ensure you've completed all of the following.
+      options:
+        - label: I have searched the [existing issues](../issues) for similar problems.
+          required: true
+        - label: I have reviewed the [CI/CD documentation](../../CI_CD.md).
+          required: true
+        - label: I have checked the [troubleshooting guide](../../CI_CD.md#troubleshooting).
+          required: true
+
+  - type: dropdown
+    id: issue-type
+    attributes:
+      label: Issue Type
+      description: What type of CI/CD issue is this?
+      options:
+        - Workflow failing
+        - Deployment failing
+        - Test failures
+        - Security scan false positive
+        - Performance/timeout
+        - Configuration issue
+        - Permission denied
+        - Secret/credential issue
+        - Container build issue
+        - Other
+    validations:
+      required: true
+
+  - type: dropdown
+    id: workflow
+    attributes:
+      label: Affected Workflow
+      description: Which workflow is affected?
+      options:
+        - Backend CI
+        - Frontend CI
+        - Migration Check
+        - Pre-commit Checks
+        - Container Build & Scan
+        - Test Matrix
+        - Deploy
+        - All workflows
+        - Other
+    validations:
+      required: true
+
+  - type: textarea
+    id: description
+    attributes:
+      label: Issue Description
+      description: A clear and concise description of the CI/CD issue.
+      placeholder: When I... the workflow...
+    validations:
+      required: true
+
+  - type: input
+    id: workflow-run
+    attributes:
+      label: Workflow Run URL
+      description: Link to the failing workflow run (if applicable)
+      placeholder: https://github.com/ORG/REPO/actions/runs/123456789
+    validations:
+      required: false
+
+  - type: input
+    id: pr-number
+    attributes:
+      label: Pull Request Number
+      description: Associated PR number (if applicable)
+      placeholder: "#123"
+    validations:
+      required: false
+
+  - type: dropdown
+    id: frequency
+    attributes:
+      label: Frequency
+      description: How often does this issue occur?
+      options:
+        - Always (100%)
+        - Often (> 50%)
+        - Sometimes (< 50%)
+        - Rarely (< 10%)
+        - First time
+    validations:
+      required: true
+
+  - type: dropdown
+    id: environment
+    attributes:
+      label: Environment
+      description: Where does this issue occur?
+      options:
+        - CI/CD Pipeline (GitHub Actions)
+        - Staging deployment
+        - Production deployment
+        - Local workflow testing
+        - All environments
+      multiple: true
+    validations:
+      required: true
+
+  - type: textarea
+    id: error-log
+    attributes:
+      label: Error Log
+      description: Paste the relevant error messages or logs.
+      render: shell
+      placeholder: |
+        Error: ...
+        at ...
+    validations:
+      required: false
+
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to Reproduce
+      description: How can we reproduce this issue?
+      placeholder: |
+        1. Create a PR with...
+        2. Workflow runs...
+        3. Fails at step...
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected Behavior
+      description: What should happen?
+      placeholder: The workflow should...
+    validations:
+      required: true
+
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual Behavior
+      description: What actually happens?
+      placeholder: Instead, the workflow...
+    validations:
+      required: true
+
+  - type: dropdown
+    id: impact
+    attributes:
+      label: Impact
+      description: What is the impact of this issue?
+      options:
+        - 🔴 Critical - Blocking all deployments
+        - 🟠 High - Blocking some deployments
+        - 🟡 Medium - Causing delays
+        - 🟢 Low - Minor inconvenience
+    validations:
+      required: true
+
+  - type: textarea
+    id: workaround
+    attributes:
+      label: Workaround
+      description: Is there a temporary workaround?
+      placeholder: I can work around this by...
+    validations:
+      required: false
+
+  - type: textarea
+    id: config
+    attributes:
+      label: Relevant Configuration
+      description: Any relevant configuration (secrets, environment variables, workflow settings)
+      placeholder: |
+        - Secret XYZ is set
+        - Environment: staging
+        - Branch protection rules: ...
+      render: yaml
+    validations:
+      required: false
+
+  - type: textarea
+    id: recent-changes
+    attributes:
+      label: Recent Changes
+      description: Were there any recent changes that might be related?
+      placeholder: |
+        - Updated workflow file
+        - Changed secrets
+        - Updated dependencies
+    validations:
+      required: false
+
+  - type: textarea
+    id: additional
+    attributes:
+      label: Additional Context
+      description: Any other relevant information.
+      placeholder: |
+        - This started happening after...
+        - It works on branch X but not Y...
+    validations:
+      required: false
+
+  - type: checkboxes
+    id: contribution
+    attributes:
+      label: Are you willing to help fix this?
+      options:
+        - label: Yes, I can submit a PR to fix this
+        - label: Yes, but I need guidance
+        - label: I can help test the fix

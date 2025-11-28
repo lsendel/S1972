@@ -1,0 +1,39 @@
+version: '3.8'
+
+# Test environment configuration
+# Used for running automated tests
+
+services:
+  backend:
+    environment:
+      - DJANGO_SETTINGS_MODULE=config.settings.test
+      - DJANGO_DEBUG=False
+      - DJANGO_ALLOWED_HOSTS=localhost,127.0.0.1,backend,api.localhost
+      - DATABASE_URL=postgres://postgres:postgres@db:5432/saas_test
+      - REDIS_URL=redis://redis:6379/1
+      - CELERY_BROKER_URL=redis://redis:6379/1
+      - EMAIL_BACKEND=django.core.mail.backends.console.EmailBackend
+    volumes:
+      - ./backend:/app
+
+  frontend:
+    environment:
+      - VITE_API_URL=http://api.localhost
+      - NODE_ENV=test
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+
+  db:
+    environment:
+      - POSTGRES_DB=saas_test
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+
+  celery:
+    environment:
+      - DJANGO_SETTINGS_MODULE=config.settings.test
+      - DATABASE_URL=postgres://postgres:postgres@db:5432/saas_test
+      - REDIS_URL=redis://redis:6379/1
+    volumes:
+      - ./backend:/app

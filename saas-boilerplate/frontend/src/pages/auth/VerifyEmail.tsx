@@ -1,7 +1,9 @@
-import React, { useEffect, useState } from "react"
+import { useEffect, useState } from "react"
 import { useParams, Link, useNavigate } from "react-router-dom"
 import { Button } from "@/components/ui/button"
-import client from "@/api/client"
+import { api } from "@/api/config"
+
+import type { ApiError } from "@/api/generated"
 
 export default function VerifyEmail() {
   const { token } = useParams<{ token: string }>()
@@ -18,19 +20,21 @@ export default function VerifyEmail() {
       }
 
       try {
-        await client.post('/auth/email/verify/', { token })
+        await api.auth.authEmailVerifyCreate({ requestBody: { token } })
         setStatus('success')
         // Redirect to onboarding after 2 seconds
         setTimeout(() => {
           navigate('/onboarding')
         }, 2000)
-      } catch (err: any) {
+      } catch (err) {
         setStatus('error')
-        setError(err?.error || 'Failed to verify email. The link may have expired.')
+        const apiError = err as ApiError
+        const body = apiError.body as { error?: string }
+        setError(body?.error ?? 'Failed to verify email. The link may have expired.')
       }
     }
 
-    verifyEmail()
+    void verifyEmail()
   }, [token, navigate])
 
   return (

@@ -1,0 +1,31 @@
+# YAML linting configuration for yamllint
+
+extends: default
+
+rules:
+  line-length:
+    max: 120
+    level: warning
+
+  indentation:
+    spaces: 2
+    indent-sequences: true
+
+  comments:
+    min-spaces-from-content: 1
+
+  truthy:
+    allowed-values: ['true', 'false', 'yes', 'no', 'on', 'off']
+
+  document-start: disable
+
+  # Allow duplicate keys in docker-compose overrides
+  key-duplicates: disable
+
+ignore: |
+  node_modules/
+  .venv/
+  venv/
+  __pycache__/
+  *.pyc
+  .git/

@@ -1,6 +1,17 @@
 from pathlib import Path
-import os
 from datetime import timedelta
+import environ
+from datetime import timedelta
+
+
+# Build paths inside the project like this: BASE_DIR / 'subdir'.
+BASE_DIR = Path(__file__).resolve().parent.parent.parent
+
+env = environ.Env()
+env_file = BASE_DIR / '.env'
+if env_file.exists():
+    environ.Env.read_env(env_file)
+
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
@@ -9,9 +20,11 @@ BASE_DIR = Path(__file__).resolve().parent.parent.parent
 # See https://docs.djangoproject.com/en/5.1/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = os.environ.get('DJANGO_SECRET_KEY', 'django-insecure-default-key-change-me')
+SECRET_KEY = env('DJANGO_SECRET_KEY', default='django-insecure-default-key-change-me')
 
-ALLOWED_HOSTS = os.environ.get('DJANGO_ALLOWED_HOSTS', '').split(',')
+ALLOWED_HOSTS = env.list('DJANGO_ALLOWED_HOSTS', default=['localhost', '127.0.0.1'])
+
+FIELD_ENCRYPTION_KEY = env('FIELD_ENCRYPTION_KEY', default=None)
 
 # Application definition
 
@@ -43,10 +56,12 @@ INSTALLED_APPS = [
     'apps.organizations',
     'apps.subscriptions',
     'apps.analytics',
+    'apps.notifications',
 ]
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
+    'whitenoise.middleware.WhiteNoiseMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'corsheaders.middleware.CorsMiddleware',
     'django.middleware.common.CommonMiddleware',
@@ -80,13 +95,10 @@ WSGI_APPLICATION = 'config.wsgi.application'
 
 # Database
 # https://docs.djangoproject.com/en/5.1/ref/settings/#databases
-import dj_database_url
 DATABASES = {
-    'default': dj_database_url.config(
-        default=os.environ.get('DATABASE_URL', 'postgres://postgres:postgres@db:5432/saas_dev'),
-        conn_max_age=600,
-    )
+    'default': env.db('DATABASE_URL', default='postgres://postgres:postgres@db:5432/saas_dev'),
 }
+DATABASES['default']['CONN_MAX_AGE'] = env.int('CONN_MAX_AGE', default=600)
 
 # Password validation
 # https://docs.djangoproject.com/en/5.1/ref/settings/#auth-password-validators
@@ -126,6 +138,15 @@ USE_TZ = True
 STATIC_URL = 'static/'
 STATIC_ROOT = BASE_DIR / 'staticfiles'
 
+STORAGES = {
+    "default": {
+        "BACKEND": "django.core.files.storage.FileSystemStorage",
+    },
+    "staticfiles": {
+        "BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage",
+    },
+}
+
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.1/ref/settings/#default-auto-field
 
@@ -154,44 +175,76 @@ REST_FRAMEWORK = {
 }
 
 # CORS
-CORS_ALLOWED_ORIGINS = [
-    "http://localhost:5173",
-    "http://127.0.0.1:5173",
-]
+CORS_ALLOWED_ORIGINS = env.list(
+    'CORS_ALLOWED_ORIGINS',
+    default=['http://localhost:5173', 'http://127.0.0.1:5173'],
+)
 CORS_ALLOW_CREDENTIALS = True
-CSRF_TRUSTED_ORIGINS = [
-    "http://localhost:5173",
-    "http://127.0.0.1:5173",
-]
+CSRF_TRUSTED_ORIGINS = env.list(
+    'CSRF_TRUSTED_ORIGINS',
+    default=['http://localhost:5173', 'http://127.0.0.1:5173'],
+)
 
 # Celery
-CELERY_BROKER_URL = os.environ.get('CELERY_BROKER_URL', 'redis://redis:6379/0')
-CELERY_RESULT_BACKEND = os.environ.get('REDIS_URL', 'redis://redis:6379/0')
+CELERY_BROKER_URL = env('CELERY_BROKER_URL', default='redis://redis:6379/0')
+CELERY_RESULT_BACKEND = env('REDIS_URL', default='redis://redis:6379/0')
 CELERY_ACCEPT_CONTENT = ['json']
 CELERY_TASK_SERIALIZER = 'json'
 CELERY_RESULT_SERIALIZER = 'json'
+CELERY_TIMEZONE = 'UTC'
+
+# Celery Beat Schedule
+from celery.schedules import crontab
+
+CELERY_BEAT_SCHEDULE = {
+    # Aggregate daily metrics at 1 AM UTC
+    'aggregate-daily-metrics': {
+        'task': 'apps.analytics.tasks.aggregate_daily_metrics',
+        'schedule': crontab(hour=1, minute=0),
+        'options': {'expires': 3600},  # Task expires after 1 hour if not executed
+    },
+    # Clean up old activity logs every Sunday at 2 AM UTC
+    'cleanup-old-activity-logs': {
+        'task': 'apps.analytics.tasks.cleanup_old_activity_logs',
+        'schedule': crontab(hour=2, minute=0, day_of_week=0),
+        'kwargs': {'days': 90},  # Keep 90 days of logs
+    },
+    # Clean up old sessions every Sunday at 3 AM UTC
+    'cleanup-old-sessions': {
+        'task': 'apps.analytics.tasks.cleanup_old_sessions',
+        'schedule': crontab(hour=3, minute=0, day_of_week=0),
+        'kwargs': {'days': 30},  # Keep 30 days of inactive sessions
+    },
+    # Close inactive sessions every 6 hours
+    'close-inactive-sessions': {
+        'task': 'apps.analytics.tasks.close_inactive_sessions',
+        'schedule': crontab(minute=0, hour='*/6'),
+        'kwargs': {'hours': 24},  # Close sessions inactive for 24 hours
+    },
+}
 
 # Email
-EMAIL_BACKEND = os.environ.get('EMAIL_BACKEND', 'django.core.mail.backends.console.EmailBackend')
-EMAIL_HOST = os.environ.get('EMAIL_HOST', 'localhost')
-EMAIL_PORT = int(os.environ.get('EMAIL_PORT', 1025))
-EMAIL_HOST_USER = os.environ.get('EMAIL_HOST_USER', '')
-EMAIL_HOST_PASSWORD = os.environ.get('EMAIL_HOST_PASSWORD', '')
+EMAIL_BACKEND = env('EMAIL_BACKEND', default='django.core.mail.backends.console.EmailBackend')
+EMAIL_HOST = env('EMAIL_HOST', default='localhost')
+EMAIL_PORT = env.int('EMAIL_PORT', default=1025)
+EMAIL_HOST_USER = env('EMAIL_HOST_USER', default='')
+EMAIL_HOST_PASSWORD = env('EMAIL_HOST_PASSWORD', default='')
 DEFAULT_FROM_EMAIL = 'noreply@example.com'
 
 # Stripe
-STRIPE_SECRET_KEY = os.environ.get('STRIPE_SECRET_KEY', '')
-STRIPE_PUBLISHABLE_KEY = os.environ.get('STRIPE_PUBLISHABLE_KEY', '')
-STRIPE_WEBHOOK_SECRET = os.environ.get('STRIPE_WEBHOOK_SECRET', '')
+STRIPE_SECRET_KEY = env('STRIPE_SECRET_KEY', default='')
+STRIPE_PUBLISHABLE_KEY = env('STRIPE_PUBLISHABLE_KEY', default='')
+STRIPE_WEBHOOK_SECRET = env('STRIPE_WEBHOOK_SECRET', default='')
+# Align with the current stable Stripe API; keep pinned for predictable webhook payloads
+STRIPE_API_VERSION = env('STRIPE_API_VERSION', default='2023-10-16')
 
 # AllAuth
 SITE_ID = 1
 ACCOUNT_USER_MODEL_USERNAME_FIELD = None
-ACCOUNT_EMAIL_REQUIRED = True
-ACCOUNT_USERNAME_REQUIRED = False
-ACCOUNT_AUTHENTICATION_METHOD = 'email'
+ACCOUNT_LOGIN_METHODS = {'email'}
 ACCOUNT_EMAIL_VERIFICATION = 'mandatory'
 ACCOUNT_CONFIRM_EMAIL_ON_GET = True
+ACCOUNT_SIGNUP_FIELDS = ['email*']
 
 # Social Account Configuration
 SOCIALACCOUNT_PROVIDERS = {
@@ -204,8 +257,8 @@ SOCIALACCOUNT_PROVIDERS = {
             'access_type': 'online',
         },
         'APP': {
-            'client_id': os.environ.get('GOOGLE_CLIENT_ID', ''),
-            'secret': os.environ.get('GOOGLE_CLIENT_SECRET', ''),
+            'client_id': env('GOOGLE_CLIENT_ID', default=''),
+            'secret': env('GOOGLE_CLIENT_SECRET', default=''),
             'key': ''
         }
     },
@@ -215,8 +268,8 @@ SOCIALACCOUNT_PROVIDERS = {
             'user:email',
         ],
         'APP': {
-            'client_id': os.environ.get('GITHUB_CLIENT_ID', ''),
-            'secret': os.environ.get('GITHUB_CLIENT_SECRET', ''),
+            'client_id': env('GITHUB_CLIENT_ID', default=''),
+            'secret': env('GITHUB_CLIENT_SECRET', default=''),
             'key': ''
         }
     }
@@ -231,7 +284,7 @@ SOCIALACCOUNT_EMAIL_VERIFICATION = 'none'  # Email already verified by OAuth pro
 CACHES = {
     'default': {
         'BACKEND': 'django.core.cache.backends.redis.RedisCache',
-        'LOCATION': os.environ.get('REDIS_URL', 'redis://redis:6379/0'),
+        'LOCATION': env('REDIS_URL', default='redis://redis:6379/0'),
     }
 }
 
@@ -252,3 +305,37 @@ PASSWORD_HASHERS = [
 
 # API Documentation (drf-spectacular)
 from .api_docs import SPECTACULAR_SETTINGS
+
+# Frontend base URL used in emails/links
+# Frontend base URL used in emails/links
+FRONTEND_URL = env('FRONTEND_URL', default='http://localhost:5173')
+
+# Logging defaults (overridden in production settings)
+LOG_LEVEL = env('DJANGO_LOG_LEVEL', default='INFO')
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'formatters': {
+        'structured': {
+            'format': '[{levelname}] {asctime} {name}: {message}',
+            'style': '{',
+        },
+    },
+    'handlers': {
+        'console': {
+            'class': 'logging.StreamHandler',
+            'formatter': 'structured',
+        },
+    },
+    'root': {
+        'handlers': ['console'],
+        'level': LOG_LEVEL,
+    },
+    'loggers': {
+        'django.request': {
+            'handlers': ['console'],
+            'level': LOG_LEVEL,
+            'propagate': False,
+        },
+    },
+}
