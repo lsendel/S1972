@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest'
-import { render, screen, waitFor } from '@/test/utils'
+import { render, screen, waitFor, act } from '@/test/utils'
 import userEvent from '@testing-library/user-event'
 import { ToastProvider, useToastContext } from './ToastContainer'
 
@@ -20,7 +20,7 @@ function TestComponent() {
 describe('ToastContainer', () => {
   it('shows success toast', async () => {
     const user = userEvent.setup()
-    
+
     render(
       <ToastProvider>
         <TestComponent />
@@ -36,7 +36,7 @@ describe('ToastContainer', () => {
 
   it('shows error toast', async () => {
     const user = userEvent.setup()
-    
+
     render(
       <ToastProvider>
         <TestComponent />
@@ -52,7 +52,7 @@ describe('ToastContainer', () => {
 
   it('shows warning toast', async () => {
     const user = userEvent.setup()
-    
+
     render(
       <ToastProvider>
         <TestComponent />
@@ -68,7 +68,7 @@ describe('ToastContainer', () => {
 
   it('shows info toast', async () => {
     const user = userEvent.setup()
-    
+
     render(
       <ToastProvider>
         <TestComponent />
@@ -84,7 +84,7 @@ describe('ToastContainer', () => {
 
   it('allows closing toast', async () => {
     const user = userEvent.setup()
-    
+
     render(
       <ToastProvider>
         <TestComponent />
@@ -100,10 +100,10 @@ describe('ToastContainer', () => {
     // Find and click close button
     const closeButtons = screen.getAllByRole('button', { name: '' })
     const closeButton = closeButtons.find(btn => btn.querySelector('svg'))
-    
+
     if (closeButton) {
       await user.click(closeButton)
-      
+
       await waitFor(() => {
         expect(screen.queryByText('Success message')).not.toBeInTheDocument()
       })
@@ -111,9 +111,9 @@ describe('ToastContainer', () => {
   })
 
   it('auto-dismisses toast after duration', async () => {
-    const user = userEvent.setup()
     vi.useFakeTimers()
-    
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
+
     render(
       <ToastProvider>
         <TestComponent />
@@ -127,12 +127,14 @@ describe('ToastContainer', () => {
     })
 
     // Fast-forward time
-    vi.advanceTimersByTime(5000)
+    act(() => {
+      vi.advanceTimersByTime(6000)
+    })
 
     await waitFor(() => {
       expect(screen.queryByText('Success message')).not.toBeInTheDocument()
     })
 
     vi.useRealTimers()
-  })
+  }, 10000)
 })

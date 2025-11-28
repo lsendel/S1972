@@ -1,16 +1,16 @@
+
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, waitFor } from '@/test/utils'
 import userEvent from '@testing-library/user-event'
+import client from '@/api/client'
 import TwoFactorAuth from './TwoFactorAuth'
 
 // Mock the API client
-const mockClient = {
-  get: vi.fn(),
-  post: vi.fn(),
-}
-
 vi.mock('@/api/client', () => ({
-  default: mockClient,
+  default: {
+    get: vi.fn(),
+    post: vi.fn(),
+  },
 }))
 
 describe('TwoFactorAuth Component', () => {
@@ -20,7 +20,7 @@ describe('TwoFactorAuth Component', () => {
 
   describe('When 2FA is disabled', () => {
     beforeEach(() => {
-      mockClient.get.mockResolvedValue({
+      (client.get as any).mockResolvedValue({
         enabled: false,
         device: null,
         backup_codes_remaining: 0,
@@ -29,7 +29,7 @@ describe('TwoFactorAuth Component', () => {
 
     it('shows enable 2FA button', async () => {
       render(<TwoFactorAuth />)
-      
+
       await waitFor(() => {
         expect(screen.getByText(/enable 2fa/i)).toBeInTheDocument()
       })
@@ -37,19 +37,20 @@ describe('TwoFactorAuth Component', () => {
 
     it('shows description about 2FA', async () => {
       render(<TwoFactorAuth />)
-      
+
       await waitFor(() => {
         expect(screen.getByText(/add an extra layer of security/i)).toBeInTheDocument()
       })
     })
 
     it('initiates setup when enable button is clicked', async () => {
+      console.log('userEvent:', userEvent)
       const user = userEvent.setup()
-      mockClient.post.mockResolvedValue({
-        qr_code: 'data:image/png;base64,mockqrcode',
-        secret: 'MOCKSECRET123456',
-        device: { id: '1', name: 'Default' },
-      })
+        ; (client.post as any).mockResolvedValue({
+          qr_code: 'data:image/png;base64,mockqrcode',
+          secret: 'MOCKSECRET123456',
+          device: { id: '1', name: 'Default' },
+        })
 
       render(<TwoFactorAuth />)
 
@@ -60,7 +61,7 @@ describe('TwoFactorAuth Component', () => {
       await user.click(screen.getByText(/enable 2fa/i))
 
       await waitFor(() => {
-        expect(mockClient.post).toHaveBeenCalledWith(
+        expect(client.post).toHaveBeenCalledWith(
           '/auth/2fa/setup/',
           { name: 'Default' }
         )
@@ -70,16 +71,16 @@ describe('TwoFactorAuth Component', () => {
 
   describe('When 2FA setup is in progress', () => {
     beforeEach(() => {
-      mockClient.get.mockResolvedValue({
+      (client.get as any).mockResolvedValue({
         enabled: false,
         device: null,
         backup_codes_remaining: 0,
       })
-      mockClient.post.mockResolvedValueOnce({
-        qr_code: 'data:image/png;base64,mockqrcode',
-        secret: 'MOCKSECRET123456',
-        device: { id: '1', name: 'Default' },
-      })
+        ; (client.post as any).mockResolvedValueOnce({
+          qr_code: 'data:image/png;base64,mockqrcode',
+          secret: 'MOCKSECRET123456',
+          device: { id: '1', name: 'Default' },
+        })
     })
 
     it('displays QR code after setup', async () => {
@@ -135,7 +136,7 @@ describe('TwoFactorAuth Component', () => {
 
   describe('When 2FA is enabled', () => {
     beforeEach(() => {
-      mockClient.get.mockResolvedValue({
+      (client.get as any).mockResolvedValue({
         enabled: true,
         device: {
           id: '1',
@@ -182,25 +183,25 @@ describe('TwoFactorAuth Component', () => {
   describe('Backup codes display', () => {
     it('displays backup codes after enabling 2FA', async () => {
       const user = userEvent.setup()
-      mockClient.get.mockResolvedValue({
-        enabled: false,
-        device: null,
-        backup_codes_remaining: 0,
-      })
-      
-      mockClient.post
-        .mockResolvedValueOnce({
-          qr_code: 'data:image/png;base64,mockqrcode',
-          secret: 'MOCKSECRET123456',
-          device: { id: '1', name: 'Default' },
+        ; (client.get as any).mockResolvedValue({
+          enabled: false,
+          device: null,
+          backup_codes_remaining: 0,
         })
-        .mockResolvedValueOnce({
-          backup_codes: [
-            '1234-5678',
-            '2345-6789',
-            '3456-7890',
-          ],
-        })
+
+        ; (client.post as any)
+          .mockResolvedValueOnce({
+            qr_code: 'data:image/png;base64,mockqrcode',
+            secret: 'MOCKSECRET123456',
+            device: { id: '1', name: 'Default' },
+          })
+          .mockResolvedValueOnce({
+            backup_codes: [
+              '1234-5678',
+              '2345-6789',
+              '3456-7890',
+            ],
+          })
 
       render(<TwoFactorAuth />)
 

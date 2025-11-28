@@ -1,15 +1,14 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, waitFor } from '@/test/utils'
 import userEvent from '@testing-library/user-event'
+import client from '@/api/client'
 import OAuthConnections from './OAuthConnections'
 
-const mockClient = {
-  get: vi.fn(),
-  post: vi.fn(),
-}
-
 vi.mock('@/api/client', () => ({
-  default: mockClient,
+  default: {
+    get: vi.fn(),
+    post: vi.fn(),
+  },
 }))
 
 describe('OAuthConnections Component', () => {
@@ -21,16 +20,20 @@ describe('OAuthConnections Component', () => {
 
   describe('When OAuth providers are configured', () => {
     beforeEach(() => {
-      mockClient.get
-        .mockResolvedValueOnce({
-          providers: [
-            { provider: 'google', name: 'Google', connected: false },
-            { provider: 'github', name: 'GitHub', connected: false },
-          ],
-        })
-        .mockResolvedValueOnce({
-          accounts: [],
-        })
+      ; (client.get as any).mockImplementation((url: string) => {
+        if (url.includes('providers')) {
+          return Promise.resolve({
+            providers: [
+              { provider: 'google', name: 'Google', connected: false },
+              { provider: 'github', name: 'GitHub', connected: false },
+            ],
+          })
+        }
+        if (url.includes('accounts')) {
+          return Promise.resolve({ accounts: [] })
+        }
+        return Promise.resolve({})
+      })
     })
 
     it('displays available providers', async () => {
@@ -63,24 +66,30 @@ describe('OAuthConnections Component', () => {
 
   describe('When providers are connected', () => {
     beforeEach(() => {
-      mockClient.get
-        .mockResolvedValueOnce({
-          providers: [
-            { provider: 'google', name: 'Google', connected: true },
-            { provider: 'github', name: 'GitHub', connected: false },
-          ],
-        })
-        .mockResolvedValueOnce({
-          accounts: [
-            {
-              id: '1',
-              provider: 'google',
-              provider_name: 'Google',
-              email: 'test@gmail.com',
-              name: 'Test User',
-            },
-          ],
-        })
+      ; (client.get as any).mockImplementation((url: string) => {
+        if (url.includes('providers')) {
+          return Promise.resolve({
+            providers: [
+              { provider: 'google', name: 'Google', connected: true },
+              { provider: 'github', name: 'GitHub', connected: false },
+            ],
+          })
+        }
+        if (url.includes('accounts')) {
+          return Promise.resolve({
+            accounts: [
+              {
+                id: '1',
+                provider: 'google',
+                provider_name: 'Google',
+                email: 'test@gmail.com',
+                name: 'Test User',
+              },
+            ],
+          })
+        }
+        return Promise.resolve({})
+      })
     })
 
     it('displays connected status', async () => {
@@ -120,22 +129,26 @@ describe('OAuthConnections Component', () => {
 
   describe('Connect functionality', () => {
     beforeEach(() => {
-      mockClient.get
-        .mockResolvedValueOnce({
-          providers: [
-            { provider: 'google', name: 'Google', connected: false },
-          ],
-        })
-        .mockResolvedValueOnce({
-          accounts: [],
-        })
+      ; (client.get as any).mockImplementation((url: string) => {
+        if (url.includes('providers')) {
+          return Promise.resolve({
+            providers: [
+              { provider: 'google', name: 'Google', connected: false },
+            ],
+          })
+        }
+        if (url.includes('accounts')) {
+          return Promise.resolve({ accounts: [] })
+        }
+        return Promise.resolve({})
+      })
     })
 
     it('redirects to OAuth URL when connect is clicked', async () => {
       const user = userEvent.setup()
-      mockClient.get.mockResolvedValueOnce({
-        authorization_url: 'https://accounts.google.com/oauth',
-      })
+        ; (client.get as any).mockResolvedValueOnce({
+          authorization_url: 'https://accounts.google.com/oauth',
+        })
 
       render(<OAuthConnections />)
 
@@ -153,22 +166,28 @@ describe('OAuthConnections Component', () => {
 
   describe('Disconnect functionality', () => {
     beforeEach(() => {
-      mockClient.get
-        .mockResolvedValueOnce({
-          providers: [
-            { provider: 'google', name: 'Google', connected: true },
-          ],
-        })
-        .mockResolvedValueOnce({
-          accounts: [
-            {
-              id: '1',
-              provider: 'google',
-              provider_name: 'Google',
-              email: 'test@gmail.com',
-            },
-          ],
-        })
+      ; (client.get as any).mockImplementation((url: string) => {
+        if (url.includes('providers')) {
+          return Promise.resolve({
+            providers: [
+              { provider: 'google', name: 'Google', connected: true },
+            ],
+          })
+        }
+        if (url.includes('accounts')) {
+          return Promise.resolve({
+            accounts: [
+              {
+                id: '1',
+                provider: 'google',
+                provider_name: 'Google',
+                email: 'test@gmail.com',
+              },
+            ],
+          })
+        }
+        return Promise.resolve({})
+      })
     })
 
     it('shows confirmation dialog when disconnect is clicked', async () => {
@@ -190,7 +209,7 @@ describe('OAuthConnections Component', () => {
     it('disconnects account when confirmed', async () => {
       const user = userEvent.setup()
       const confirmSpy = vi.spyOn(window, 'confirm').mockReturnValue(true)
-      mockClient.post.mockResolvedValue({ message: 'Account disconnected' })
+        ; (client.post as any).mockResolvedValue({ message: 'Account disconnected' })
 
       render(<OAuthConnections />)
 
@@ -201,7 +220,7 @@ describe('OAuthConnections Component', () => {
       await user.click(screen.getByText(/disconnect/i))
 
       await waitFor(() => {
-        expect(mockClient.post).toHaveBeenCalledWith('/auth/oauth/disconnect/google/')
+        expect(client.post).toHaveBeenCalledWith('/auth/oauth/disconnect/google/')
       })
 
       confirmSpy.mockRestore()
@@ -210,13 +229,15 @@ describe('OAuthConnections Component', () => {
 
   describe('When no providers are configured', () => {
     beforeEach(() => {
-      mockClient.get
-        .mockResolvedValueOnce({
-          providers: [],
-        })
-        .mockResolvedValueOnce({
-          accounts: [],
-        })
+      ; (client.get as any).mockImplementation((url: string) => {
+        if (url.includes('providers')) {
+          return Promise.resolve({ providers: [] })
+        }
+        if (url.includes('accounts')) {
+          return Promise.resolve({ accounts: [] })
+        }
+        return Promise.resolve({})
+      })
     })
 
     it('shows no providers message', async () => {
@@ -232,10 +253,10 @@ describe('OAuthConnections Component', () => {
 
   describe('Loading state', () => {
     it('shows loading text initially', () => {
-      mockClient.get.mockImplementation(() => new Promise(() => {}))
-      
+      ; (client.get as any).mockImplementation(() => new Promise(() => { }))
+
       render(<OAuthConnections />)
-      
+
       expect(screen.getByText(/loading/i)).toBeInTheDocument()
     })
   })

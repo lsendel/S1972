@@ -118,7 +118,7 @@ export default function OAuthConnections() {
         </p>
 
         <div className="space-y-4">
-          {providers?.providers.map((provider) => {
+          {providers?.providers?.map((provider) => {
             const connectedAccount = getConnectedAccount(provider.provider)
             const isConnected = provider.connected
 

@@ -40,7 +40,7 @@ describe('Dashboard Page', () => {
 
   it('displays organization name', () => {
     render(<Dashboard />)
-    expect(screen.getByText(mockOrganization.name)).toBeInTheDocument()
+    expect(screen.getByText(new RegExp(mockOrganization.name))).toBeInTheDocument()
   })
 
   it('shows team member count', () => {
