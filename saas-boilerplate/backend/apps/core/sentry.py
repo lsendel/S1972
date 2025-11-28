@@ -264,12 +264,12 @@ def add_breadcrumb(message: str, category: str = 'custom', level: str = 'info', 
 def capture_exception(error: Exception, **context):
     """
     Manually capture an exception.
-    
+
     Args:
         error: Exception to capture
         **context: Additional context to include
     """
-    with sentry_sdk.push_scope() as scope:
+    with sentry_sdk.isolation_scope() as scope:
         for key, value in context.items():
             scope.set_context(key, value)
         sentry_sdk.capture_exception(error)
@@ -278,13 +278,13 @@ def capture_exception(error: Exception, **context):
 def capture_message(message: str, level: str = 'info', **context):
     """
     Manually capture a message.
-    
+
     Args:
         message: Message to capture
         level: Severity level (debug, info, warning, error, fatal)
         **context: Additional context to include
     """
-    with sentry_sdk.push_scope() as scope:
+    with sentry_sdk.isolation_scope() as scope:
         for key, value in context.items():
             scope.set_context(key, value)
         sentry_sdk.capture_message(message, level=level)
@@ -329,7 +329,7 @@ def _hash_email(email: str) -> str:
 def with_sentry_context(**context_kwargs):
     """
     Decorator to automatically add context to Sentry errors.
-    
+
     Usage:
         @with_sentry_context(feature='payment_processing')
         def process_payment(amount):
@@ -337,7 +337,7 @@ def with_sentry_context(**context_kwargs):
     """
     def decorator(func):
         def wrapper(*args, **kwargs):
-            with sentry_sdk.push_scope() as scope:
+            with sentry_sdk.isolation_scope() as scope:
                 for key, value in context_kwargs.items():
                     scope.set_tag(key, value)
                 return func(*args, **kwargs)
