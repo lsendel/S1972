@@ -1,7 +1,8 @@
 import factory
 from datetime import timedelta
 from django.utils import timezone
-from apps.organizations.models import Organization, Membership, Invitation
+from apps.organizations.models import Organization, Membership
+from apps.invitations.models import Invitation
 from apps.accounts.tests.factories import UserFactory
 
 
