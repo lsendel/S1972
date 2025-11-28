@@ -22,9 +22,8 @@ ENV PATH="/opt/venv/bin:$PATH"
 
 # Copy and install Python dependencies
 WORKDIR /app
-COPY pyproject.toml setup.py ./
-COPY src/saas_boilerplate/__init__.py ./src/saas_boilerplate/
-RUN pip install --upgrade pip && pip install -e .
+COPY pyproject.toml ./
+RUN pip install --no-cache-dir .
 
 # Final stage
 FROM python:3.12-slim
@@ -59,7 +58,8 @@ COPY --chown=appuser:appuser . .
 USER appuser
 
 # Collect static files
-RUN python manage.py collectstatic --no-input --clear
+# Collect static files
+RUN DJANGO_SECRET_KEY=dummy DB_NAME=dummy DB_USER=dummy DB_PASSWORD=dummy DB_HOST=dummy python manage.py collectstatic --no-input --clear
 
 # Expose port
 EXPOSE 8000
@@ -70,9 +70,9 @@ HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
 
 # Run gunicorn
 CMD ["gunicorn", "config.wsgi:application", \
-     "--bind", "0.0.0.0:8000", \
-     "--workers", "4", \
-     "--timeout", "120", \
-     "--access-logfile", "-", \
-     "--error-logfile", "-", \
-     "--log-level", "info"]
+    "--bind", "0.0.0.0:8000", \
+    "--workers", "4", \
+    "--timeout", "120", \
+    "--access-logfile", "-", \
+    "--error-logfile", "-", \
+    "--log-level", "info"]

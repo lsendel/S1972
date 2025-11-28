@@ -37,6 +37,7 @@ class OrganizationViewSet(viewsets.ModelViewSet):
 class MemberViewSet(viewsets.ReadOnlyModelViewSet):
     serializer_class = MembershipSerializer
     permission_classes = [permissions.IsAuthenticated]
+    pagination_class = None
 
     def get_queryset(self):
         org_slug = self.kwargs.get('organization_slug')
@@ -92,6 +93,7 @@ class MemberViewSet(viewsets.ReadOnlyModelViewSet):
 class InvitationViewSet(viewsets.ReadOnlyModelViewSet):
     serializer_class = InvitationSerializer
     permission_classes = [permissions.IsAuthenticated]
+    pagination_class = None
 
     def get_queryset(self):
         org_slug = self.kwargs.get('organization_slug')

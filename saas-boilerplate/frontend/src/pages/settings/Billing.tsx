@@ -7,12 +7,12 @@ import client from "@/api/client"
 export default function BillingSettings() {
   const { orgSlug } = useParams<{ orgSlug: string }>()
 
-  const { data: subscription } = useQuery({
+  const { data: subscription } = useQuery<any>({
     queryKey: ['subscriptions', 'current', orgSlug],
     queryFn: () => client.get(`/subscriptions/current/?organization=${orgSlug}`),
   })
 
-  const { data: plans } = useQuery({
+  const { data: plans } = useQuery<any>({
     queryKey: ['subscriptions', 'plans'],
     queryFn: () => client.get('/subscriptions/plans/'),
   })

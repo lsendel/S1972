@@ -14,6 +14,9 @@ import SecuritySettings from './pages/settings/Security';
 import TeamSettings from './pages/settings/Team';
 import BillingSettings from './pages/settings/Billing';
 import AppLayout from './components/layout/AppLayout';
+import AdminLayout from './pages/admin/AdminLayout';
+import AdminDashboard from './pages/admin/Dashboard';
+import ActivityLogs from './pages/admin/ActivityLogs';
 import ErrorBoundary from './components/ErrorBoundary';
 import RouteErrorBoundary from './components/RouteErrorBoundary';
 import { PageLoadingSkeleton } from './components/LoadingSkeletons';
@@ -82,6 +85,20 @@ function App() {
               <Route path="settings/security" element={<SecuritySettings />} />
               <Route path="settings/team" element={<TeamSettings />} />
               <Route path="settings/billing" element={<BillingSettings />} />
+            </Route>
+
+            {/* Admin Routes */}
+            <Route
+              path="/admin"
+              element={
+                <RequireAuth>
+                  <AdminLayout />
+                </RequireAuth>
+              }
+              errorElement={<RouteErrorBoundary />}
+            >
+              <Route index element={<AdminDashboard />} />
+              <Route path="activity" element={<ActivityLogs />} />
             </Route>
 
             {/* Redirects */}

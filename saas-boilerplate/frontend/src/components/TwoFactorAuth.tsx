@@ -26,7 +26,7 @@ export default function TwoFactorAuth() {
   })
 
   const setupMutation = useMutation({
-    mutationFn: () => client.post('/auth/2fa/setup/', { name: 'Default' }),
+    mutationFn: () => client.post<{ qr_code: string; secret: string }>('/auth/2fa/setup/', { name: 'Default' }),
     onSuccess: (data) => {
       setQrCode(data.qr_code)
       setSecret(data.secret)
@@ -38,7 +38,7 @@ export default function TwoFactorAuth() {
   })
 
   const enableMutation = useMutation({
-    mutationFn: (token: string) => client.post('/auth/2fa/enable/', { token }),
+    mutationFn: (token: string) => client.post<{ backup_codes: string[] }>('/auth/2fa/enable/', { token }),
     onSuccess: (data) => {
       setBackupCodes(data.backup_codes)
       setShowBackupCodes(true)
@@ -66,7 +66,7 @@ export default function TwoFactorAuth() {
   })
 
   const regenerateBackupCodesMutation = useMutation({
-    mutationFn: (password: string) => client.post('/auth/2fa/backup-codes/regenerate/', { password }),
+    mutationFn: (password: string) => client.post<{ backup_codes: string[] }>('/auth/2fa/backup-codes/regenerate/', { password }),
     onSuccess: (data) => {
       setBackupCodes(data.backup_codes)
       setShowBackupCodes(true)
@@ -104,7 +104,7 @@ export default function TwoFactorAuth() {
 
   const downloadBackupCodes = () => {
     if (!backupCodes) return
-    
+
     const text = backupCodes.join('\n')
     const blob = new Blob([text], { type: 'text/plain' })
     const url = URL.createObjectURL(blob)

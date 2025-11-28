@@ -3,7 +3,7 @@ import { Link, useLocation, useParams, useNavigate } from 'react-router-dom';
 import { Menu, Transition } from '@headlessui/react';
 import { HomeIcon, Cog6ToothIcon, UsersIcon, CreditCardIcon, UserCircleIcon, ShieldCheckIcon } from '@heroicons/react/24/outline';
 import { ChevronUpDownIcon, CheckIcon } from '@heroicons/react/20/solid';
-import { useOrganizations } from '@/hooks/useOrganization';
+import { useOrganizations, Organization } from '@/hooks/useOrganization';
 
 const navigation = [
     { name: 'Dashboard', href: '', icon: HomeIcon },
@@ -62,7 +62,7 @@ export default function Sidebar() {
                             leaveTo="transform opacity-0 scale-95"
                         >
                             <Menu.Items className="absolute left-0 right-0 z-10 mt-2 origin-top rounded-md bg-white py-2 shadow-lg ring-1 ring-gray-900/5 focus:outline-none">
-                                {organizations?.map((org) => (
+                                {organizations?.map((org: Organization) => (
                                     <Menu.Item key={org.id}>
                                         {({ active }) => (
                                             <button

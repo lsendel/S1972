@@ -47,7 +47,7 @@ export default function OAuthConnections() {
 
   const handleConnect = async (provider: string) => {
     try {
-      const response = await client.get(`/auth/oauth/authorize/${provider}/`)
+      const response = await client.get<{ authorization_url: string }>(`/auth/oauth/authorize/${provider}/`)
       if (response.authorization_url) {
         // Redirect to OAuth provider
         window.location.href = response.authorization_url

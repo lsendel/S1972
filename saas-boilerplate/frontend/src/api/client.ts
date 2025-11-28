@@ -1,14 +1,13 @@
-import axios from 'axios';
+import axios, { AxiosRequestConfig } from 'axios';
 
-const client = axios.create({
+const axiosInstance = axios.create({
   baseURL: import.meta.env.VITE_API_URL || 'http://localhost:8000/api/v1',
-  withCredentials: true, // Include cookies
+  withCredentials: true,
   headers: {
     'Content-Type': 'application/json',
   },
 });
 
-// Helper to get cookie by name
 function getCookie(name: string): string | null {
   if (!document.cookie) {
     return null;
@@ -23,8 +22,7 @@ function getCookie(name: string): string | null {
   return decodeURIComponent(xsrfCookies[0].split('=')[1]);
 }
 
-// CSRF token handling
-client.interceptors.request.use((config) => {
+axiosInstance.interceptors.request.use((config) => {
   const csrfToken = getCookie('csrftoken');
   if (csrfToken && config.method !== 'get') {
     config.headers['X-CSRFToken'] = csrfToken;
@@ -32,16 +30,23 @@ client.interceptors.request.use((config) => {
   return config;
 });
 
-// Response unwrapping
-client.interceptors.response.use(
+axiosInstance.interceptors.response.use(
   (response) => response.data,
   (error) => {
     if (error.response?.status === 401) {
-      // Optional: Redirect to login or handle session expiry
-      // window.location.href = '/login';
+      // Handle 401
     }
     return Promise.reject(error.response?.data || error);
   }
 );
+
+// Wrapper to fix types since interceptor returns data directly
+const client = {
+  get: <T>(url: string, config?: AxiosRequestConfig) => axiosInstance.get<T, T>(url, config),
+  post: <T>(url: string, data?: any, config?: AxiosRequestConfig) => axiosInstance.post<T, T>(url, data, config),
+  put: <T>(url: string, data?: any, config?: AxiosRequestConfig) => axiosInstance.put<T, T>(url, data, config),
+  patch: <T>(url: string, data?: any, config?: AxiosRequestConfig) => axiosInstance.patch<T, T>(url, data, config),
+  delete: <T>(url: string, config?: AxiosRequestConfig) => axiosInstance.delete<T, T>(url, config),
+};
 
 export default client;
