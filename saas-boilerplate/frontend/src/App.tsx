@@ -16,6 +16,7 @@ import AppLayout from './components/layout/AppLayout';
 import ErrorBoundary from './components/ErrorBoundary';
 import RouteErrorBoundary from './components/RouteErrorBoundary';
 import { PageLoadingSkeleton } from './components/LoadingSkeletons';
+import { ToastProvider } from './components/ToastContainer';
 import { useAuth } from './hooks/useAuth';
 
 const queryClient = new QueryClient({
@@ -41,7 +42,8 @@ function App() {
   return (
     <ErrorBoundary>
       <QueryClientProvider client={queryClient}>
-        <Router>
+        <ToastProvider>
+          <Router>
           <Routes>
             {/* Public Routes */}
             <Route path="/login" element={<Login />} errorElement={<RouteErrorBoundary />} />
@@ -85,7 +87,8 @@ function App() {
             {/* 404 Catch-all */}
             <Route path="*" element={<RouteErrorBoundary />} />
           </Routes>
-        </Router>
+          </Router>
+        </ToastProvider>
       </QueryClientProvider>
     </ErrorBoundary>
   );
