@@ -18,6 +18,7 @@ dependencies = [
     "sentry-sdk>=1.40",
     "dj-database-url>=2.1",
     "drf-nested-routers>=0.93.5",
+    "drf-spectacular>=0.27",
 ]
 
 [build-system]

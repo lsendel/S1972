@@ -1,5 +1,6 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { initSentry, setSentryUser } from './lib/sentry';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import Login from './pages/auth/Login';
 import Signup from './pages/auth/Signup';
@@ -18,6 +19,9 @@ import RouteErrorBoundary from './components/RouteErrorBoundary';
 import { PageLoadingSkeleton } from './components/LoadingSkeletons';
 import { ToastProvider } from './components/ToastContainer';
 import { useAuth } from './hooks/useAuth';
+
+// Initialize Sentry
+initSentry();
 
 const queryClient = new QueryClient({
   defaultOptions: {

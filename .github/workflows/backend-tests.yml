@@ -1,0 +1,115 @@
+name: Backend Tests
+
+on:
+  push:
+    branches: [main, develop]
+    paths:
+      - 'saas-boilerplate/backend/**'
+      - '.github/workflows/backend-tests.yml'
+  pull_request:
+    branches: [main, develop]
+    paths:
+      - 'saas-boilerplate/backend/**'
+      - '.github/workflows/backend-tests.yml'
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_DB: test_db
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+      
+      redis:
+        image: redis:7
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 6379:6379
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: 'pip'
+
+      - name: Install dependencies
+        working-directory: ./saas-boilerplate/backend
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e .
+          pip install pytest pytest-django pytest-cov
+
+      - name: Run migrations
+        working-directory: ./saas-boilerplate/backend
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/test_db
+          REDIS_URL: redis://localhost:6379/0
+          DJANGO_SETTINGS_MODULE: config.settings.test
+        run: |
+          python manage.py migrate --no-input
+
+      - name: Run tests with coverage
+        working-directory: ./saas-boilerplate/backend
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/test_db
+          REDIS_URL: redis://localhost:6379/0
+          DJANGO_SETTINGS_MODULE: config.settings.test
+        run: |
+          pytest --cov=apps --cov-report=xml --cov-report=term-missing
+
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v3
+        with:
+          files: ./saas-boilerplate/backend/coverage.xml
+          flags: backend
+          name: backend-coverage
+
+  lint:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install linting tools
+        run: |
+          pip install ruff black isort
+
+      - name: Run ruff
+        working-directory: ./saas-boilerplate/backend
+        run: |
+          ruff check .
+
+      - name: Check code formatting with black
+        working-directory: ./saas-boilerplate/backend
+        run: |
+          black --check .
+
+      - name: Check import sorting with isort
+        working-directory: ./saas-boilerplate/backend
+        run: |
+          isort --check-only .

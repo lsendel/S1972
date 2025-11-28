@@ -27,6 +27,7 @@ INSTALLED_APPS = [
     # Third-party
     'rest_framework',
     'rest_framework.authtoken',
+    'drf_spectacular',
     'corsheaders',
     'allauth',
     'allauth.account',
@@ -148,6 +149,7 @@ REST_FRAMEWORK = {
         'rest_framework.filters.SearchFilter',
     ),
     'EXCEPTION_HANDLER': 'apps.core.exceptions.custom_exception_handler',
+    'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',
 }
 
 # CORS
@@ -246,3 +248,6 @@ PASSWORD_HASHERS = [
     'django.contrib.auth.hashers.PBKDF2SHA1PasswordHasher',
     'django.contrib.auth.hashers.BCryptSHA256PasswordHasher',
 ]
+
+# API Documentation (drf-spectacular)
+from .api_docs import SPECTACULAR_SETTINGS
