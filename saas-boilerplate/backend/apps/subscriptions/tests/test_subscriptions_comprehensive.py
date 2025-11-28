@@ -20,8 +20,8 @@ from django.utils import timezone
 from django.test import RequestFactory
 from rest_framework import status
 from apps.subscriptions.models import Subscription, Plan
-from apps.subscriptions.webhooks import stripe_webhook, handle_subscription_updated, handle_subscription_deleted
-from apps.subscriptions.models import StripeEvent
+from apps.billing.webhooks import stripe_webhook, handle_subscription_updated, handle_subscription_deleted
+from apps.billing.models import StripeEvent
 from apps.organizations.tests.factories import OrganizationFactory, MembershipFactory
 from apps.organizations.models import Membership
 from apps.accounts.tests.factories import UserFactory
@@ -369,7 +369,7 @@ class TestStripeWebhook:
         }
 
         with patch('stripe.Webhook.construct_event', return_value=mock_event):
-            with patch('apps.subscriptions.webhooks.handle_subscription_updated') as mock_handler:
+            with patch('apps.billing.webhooks.handle_subscription_updated') as mock_handler:
                 response = stripe_webhook(request)
 
                 assert response.status_code == 200
@@ -393,7 +393,7 @@ class TestStripeWebhook:
         request.META['HTTP_STRIPE_SIGNATURE'] = 'sig'
 
         with patch('stripe.Webhook.construct_event', return_value=mock_event):
-            with patch('apps.subscriptions.webhooks.handle_checkout_session_completed') as mock_handler:
+            with patch('apps.billing.webhooks.handle_checkout_session_completed') as mock_handler:
                 response = stripe_webhook(request)
 
                 assert response.status_code == 200
@@ -417,7 +417,7 @@ class TestStripeWebhook:
         request.META['HTTP_STRIPE_SIGNATURE'] = 'sig'
 
         with patch('stripe.Webhook.construct_event', return_value=mock_event):
-            with patch('apps.subscriptions.webhooks.handle_subscription_updated') as mock_handler:
+            with patch('apps.billing.webhooks.handle_subscription_updated') as mock_handler:
                 response = stripe_webhook(request)
 
                 assert response.status_code == 200
@@ -440,7 +440,7 @@ class TestStripeWebhook:
         request.META['HTTP_STRIPE_SIGNATURE'] = 'sig'
 
         with patch('stripe.Webhook.construct_event', return_value=mock_event):
-            with patch('apps.subscriptions.webhooks.handle_subscription_deleted') as mock_handler:
+            with patch('apps.billing.webhooks.handle_subscription_deleted') as mock_handler:
                 response = stripe_webhook(request)
 
                 assert response.status_code == 200
@@ -486,7 +486,7 @@ class TestStripeWebhook:
         request.META['HTTP_STRIPE_SIGNATURE'] = 'sig'
 
         with patch('stripe.Webhook.construct_event', return_value=mock_event):
-            with patch('apps.subscriptions.webhooks.handle_subscription_updated') as mock_handler:
+            with patch('apps.billing.webhooks.handle_subscription_updated') as mock_handler:
                 response = stripe_webhook(request)
 
                 assert response.status_code == 200
@@ -512,7 +512,7 @@ class TestStripeWebhook:
         request.META['HTTP_STRIPE_SIGNATURE'] = 'sig'
 
         with patch('stripe.Webhook.construct_event', return_value=mock_event):
-            with patch('apps.subscriptions.webhooks.handle_subscription_updated') as mock_handler:
+            with patch('apps.billing.webhooks.handle_subscription_updated') as mock_handler:
                 response = stripe_webhook(request)
 
                 assert response.status_code == 200

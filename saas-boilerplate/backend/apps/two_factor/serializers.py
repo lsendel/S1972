@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from apps.accounts.models import TOTPDevice, BackupCode
+from .models import TOTPDevice, BackupCode
 
 
 class TOTPDeviceSerializer(serializers.ModelSerializer):

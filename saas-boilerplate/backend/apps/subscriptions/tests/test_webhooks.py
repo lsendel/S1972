@@ -3,7 +3,8 @@ from unittest.mock import patch, MagicMock
 import pytest
 from django.urls import reverse
 from rest_framework import status
-from apps.subscriptions.models import Subscription, StripeEvent
+from apps.subscriptions.models import Subscription
+from apps.billing.models import StripeEvent
 from apps.organizations.models import Organization
 from apps.subscriptions.models import Plan
 from django.utils import timezone
@@ -26,7 +27,7 @@ class TestStripeWebhooks:
             price_yearly=100
         )
 
-    @patch('apps.subscriptions.webhooks._get_stripe_client')
+    @patch('apps.billing.webhooks._get_stripe_client')
     def test_checkout_session_completed(self, mock_stripe, client, organization, plan):
         # Mock the event object returned by construct_event
         # It needs to behave like a dict for json serialization in the view
@@ -87,7 +88,7 @@ class TestStripeWebhooks:
         assert sub.stripe_subscription_id == 'sub_test'
         assert sub.status == 'active'
 
-    @patch('apps.subscriptions.webhooks._get_stripe_client')
+    @patch('apps.billing.webhooks._get_stripe_client')
     def test_invoice_payment_failed(self, mock_stripe, client, organization, plan):
         # Setup existing subscription
         Subscription.objects.create(
@@ -135,7 +136,7 @@ class TestStripeWebhooks:
         sub = Subscription.objects.get(organization=organization)
         assert sub.status == 'past_due'
 
-    @patch('apps.subscriptions.webhooks._get_stripe_client')
+    @patch('apps.billing.webhooks._get_stripe_client')
     def test_invoice_paid(self, mock_stripe, client, organization, plan):
         # Setup existing subscription as past_due
         Subscription.objects.create(

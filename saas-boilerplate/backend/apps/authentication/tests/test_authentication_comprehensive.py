@@ -19,7 +19,8 @@ from django.contrib.auth.tokens import PasswordResetTokenGenerator, default_toke
 from django.utils.http import urlsafe_base64_encode, urlsafe_base64_decode
 from django.utils.encoding import force_bytes, force_str
 from rest_framework import status
-from apps.accounts.models import User, TOTPDevice, BackupCode
+from apps.accounts.models import User
+from apps.two_factor.models import TOTPDevice, BackupCode
 from apps.accounts.tests.factories import UserFactory
 from django.test.utils import override_settings
 

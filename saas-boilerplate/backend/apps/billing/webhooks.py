@@ -7,7 +7,7 @@ from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_POST
 
 from .models import StripeEvent
-from .services import (
+from apps.subscriptions.services import (
     _get_stripe_client,
     record_event,
     sync_subscription_from_stripe,

@@ -9,7 +9,8 @@ from django.db import transaction
 from django.utils import timezone as django_timezone
 
 from apps.organizations.models import Organization
-from .models import Plan, Subscription, StripeEvent
+from .models import Plan, Subscription
+from apps.billing.models import StripeEvent
 
 logger = logging.getLogger(__name__)
 

@@ -4,9 +4,9 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from django.db import transaction
 from django.core.cache import cache
-from apps.accounts.models import TOTPDevice, BackupCode
+from .models import TOTPDevice, BackupCode
 from drf_spectacular.utils import extend_schema
-from .totp_serializers import (
+from .serializers import (
     TOTPDeviceSerializer, TOTPSetupSerializer, TOTPVerifySerializer,
     TOTPEnableSerializer, BackupCodeSerializer, BackupCodeVerifySerializer,
     PasswordConfirmationSerializer
@@ -282,7 +282,7 @@ def totp_verify_login(request):
     # Try TOTP verification first
     try:
         device = user.totp_device
-        if device.verified and device.verify_token(token):
+        if device.confirmed and device.verify_token(token):
             # Clear the pending 2FA flag
             cache.delete(f'2fa_pending:{request.session.session_key}')
             # Complete the login (this would integrate with your auth system)

@@ -53,8 +53,11 @@ INSTALLED_APPS = [
     'apps.core',
     'apps.accounts',
     'apps.authentication',
+    'apps.two_factor',
     'apps.organizations',
+    'apps.invitations',
     'apps.subscriptions',
+    'apps.billing',
     'apps.analytics',
     'apps.notifications',
 ]

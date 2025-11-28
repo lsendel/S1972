@@ -11,12 +11,13 @@ class Migration(migrations.Migration):
     initial = True
 
     dependencies = [
+        ("organizations", "0001_initial"),
         migrations.swappable_dependency(settings.AUTH_USER_MODEL),
     ]
 
     operations = [
         migrations.CreateModel(
-            name="Organization",
+            name="Invitation",
             fields=[
                 (
                     "id",
@@ -29,41 +30,7 @@ class Migration(migrations.Migration):
                 ),
                 ("created_at", models.DateTimeField(auto_now_add=True)),
                 ("updated_at", models.DateTimeField(auto_now=True)),
-                ("name", models.CharField(max_length=255)),
-                ("slug", models.SlugField(unique=True)),
-                ("logo_url", models.URLField(blank=True)),
-                (
-                    "stripe_customer_id",
-                    models.CharField(
-                        blank=True, max_length=255, null=True, unique=True
-                    ),
-                ),
-                ("is_active", models.BooleanField(db_index=True, default=True)),
-                ("settings", models.JSONField(blank=True, default=dict)),
-            ],
-            options={
-                "indexes": [
-                    models.Index(
-                        fields=["is_active", "created_at"],
-                        name="organizatio_is_acti_a02541_idx",
-                    )
-                ],
-            },
-        ),
-        migrations.CreateModel(
-            name="Membership",
-            fields=[
-                (
-                    "id",
-                    models.UUIDField(
-                        default=uuid.uuid4,
-                        editable=False,
-                        primary_key=True,
-                        serialize=False,
-                    ),
-                ),
-                ("created_at", models.DateTimeField(auto_now_add=True)),
-                ("updated_at", models.DateTimeField(auto_now=True)),
+                ("email", models.EmailField(db_index=True, max_length=254)),
                 (
                     "role",
                     models.CharField(
@@ -76,22 +43,43 @@ class Migration(migrations.Migration):
                         max_length=20,
                     ),
                 ),
-                ("is_active", models.BooleanField(default=True)),
                 (
-                    "invited_by",
+                    "token_hash",
+                    models.CharField(
+                        help_text="Hashed invitation token", max_length=255, unique=True
+                    ),
+                ),
+                (
+                    "status",
+                    models.CharField(
+                        choices=[
+                            ("pending", "Pending"),
+                            ("accepted", "Accepted"),
+                            ("expired", "Expired"),
+                            ("revoked", "Revoked"),
+                        ],
+                        db_index=True,
+                        default="pending",
+                        max_length=20,
+                    ),
+                ),
+                ("expires_at", models.DateTimeField()),
+                ("accepted_at", models.DateTimeField(blank=True, null=True)),
+                (
+                    "accepted_by",
                     models.ForeignKey(
                         blank=True,
                         null=True,
-                        on_delete=django.db.models.deletion.SET_NULL,
-                        related_name="invited_members",
+                        on_delete=django.db.models.deletion.CASCADE,
+                        related_name="accepted_invitations",
                         to=settings.AUTH_USER_MODEL,
                     ),
                 ),
                 (
-                    "user",
+                    "invited_by",
                     models.ForeignKey(
                         on_delete=django.db.models.deletion.CASCADE,
-                        related_name="memberships",
+                        related_name="sent_invitations",
                         to=settings.AUTH_USER_MODEL,
                     ),
                 ),
@@ -99,7 +87,7 @@ class Migration(migrations.Migration):
                     "organization",
                     models.ForeignKey(
                         on_delete=django.db.models.deletion.CASCADE,
-                        related_name="memberships",
+                        related_name="invitations",
                         to="organizations.organization",
                     ),
                 ),
@@ -107,11 +95,13 @@ class Migration(migrations.Migration):
             options={
                 "indexes": [
                     models.Index(
-                        fields=["organization", "role"],
-                        name="organizatio_organiz_e82976_idx",
-                    )
+                        fields=["email", "status"], name="invitations_email_fc8d45_idx"
+                    ),
+                    models.Index(
+                        fields=["organization", "status"],
+                        name="invitations_organiz_3fb0a0_idx",
+                    ),
                 ],
-                "unique_together": {("user", "organization")},
             },
         ),
     ]
